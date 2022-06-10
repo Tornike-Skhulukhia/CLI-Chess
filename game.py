@@ -57,9 +57,6 @@ class Game:
 
         print(f"Checking move {move}")
 
-        # if move == "D8 H4":
-        #     breakpoint()
-
         try:
             if all(
                 [
@@ -77,21 +74,20 @@ class Game:
             return False
         return False
 
+    def _get_next_move_and_add_error_if_necessary(self):
+        move_str = input("Make a move\n").upper()
+        move_is_valid = self._is_move_str(move_str)
+
+        if not move_is_valid:
+            self.board._add_temporary_error("Not a move, try again")
+
+        return move_str, move_is_valid
+
     def _swap_player_turn(self):
         if self._player_turn == 1:
             self._player_turn = 2
         else:
             self._player_turn = 1
-
-    def _get_player_move(self):
-        """
-        for testing purposes, we will have 2 client to
-        do that later...
-        """
-        while not (move_str := self._is_move_str(input("Make a move\n"))):
-            print("Not a move, try again".center(100))
-
-        return move_str
 
     def play(self):
         print("Game Started")
@@ -102,30 +98,21 @@ class Game:
         # start game and maintain it before necessary
         while self._game_status == "running":
 
-            # get input
-
             # draw new board
             self.board.draw(self._player_turn)
 
-            move_str = self._get_player_move()
+            # get move
+            move_str, _move_is_valid = self._get_next_move_and_add_error_if_necessary()
 
-            if self.board.move_a_piece_if_possible(move_str, self._player_turn):
+            # make sure it seems valid chess move
+            if not _move_is_valid:
+                continue
+
+            if self.board.move_a_piece_if_possible_and_add_validation_errors_if_necessary(
+                move_str, self._player_turn
+            ):
                 self._swap_player_turn()
-            else:
-
-                print("Sorry you can not do that move")
 
             time.sleep(0.1)
 
         # game finished, allow to restart
-
-
-g = Game(
-    # p1_color="red3",
-    # p2_color="green1",
-    # black_cell_color="dark_blue",
-    # white_cell_color="orange",
-    # previous_move_cell_color="blue",
-)
-
-g.play()

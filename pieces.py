@@ -1,17 +1,19 @@
 import abc
 
-from numpy import index_exp
-
 
 class Piece(metaclass=abc.ABCMeta):
-    def __init__(self, color, name, piece_icon, position):
+    def __init__(self, color, name, piece_icon, position, player_number):
         self.color = color
         self.name = name
+        self.player_number = player_number
         self.piece_icon = piece_icon
         self._position = position
 
     def __repr__(self):
-        return f"""{self.color} {self.piece_icon} on {self.position} ({self.index_based_position})""".title()
+        return (
+            f"""{self.color} {self.piece_icon} on """
+            f"""{self.position} ({self.index_based_position})""".title()
+        )
 
     @property
     def position(self):
@@ -63,59 +65,120 @@ class Piece(metaclass=abc.ABCMeta):
 
         return result
 
-    @abc.abstractmethod
-    def move(self, our_pieces, opponent_pieces):
-        """
-        Move object to new location if
-        combination of pieces on board allows it
-        """
-        raise NotImplementedError
+    # @abc.abstractmethod
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     """
+    #     Move object to new location if
+    #     combination of pieces on board allows it
+    #     """
+    #     raise NotImplementedError
+
+    def can_move_to(
+        self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    ):
+        # is move valid for this piece
+        can_move_there = True
+        killed_opponent_piece = None
+
+        # will opponent piece be killed with this move?
+        if (
+            new_position in positions_to_pieces
+            and positions_to_pieces[new_position].player_number
+            != player_pieces[0].player_number
+        ):
+            killed_opponent_piece = positions_to_pieces[new_position]
+
+        return can_move_there, killed_opponent_piece
 
 
 class King(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="king", piece_icon="♚", position=position)
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="king",
+            piece_icon="♚",
+            position=position,
+            player_number=player_number,
+        )
 
-    def move(self, our_pieces, opponent_pieces):
-        return
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     return
 
 
 class Queen(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="queen", piece_icon="♛", position=position)
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="queen",
+            piece_icon="♛",
+            position=position,
+            player_number=player_number,
+        )
 
-    def move(self, our_pieces, opponent_pieces):
-        return
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     return
 
 
 class Rook(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="rook", piece_icon="♜", position=position)
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="rook",
+            piece_icon="♜",
+            position=position,
+            player_number=player_number,
+        )
 
-    def move(self, our_pieces, opponent_pieces):
-        return
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     return
 
 
 class Bishop(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="bishop", piece_icon="♝", position=position)
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="bishop",
+            piece_icon="♝",
+            position=position,
+            player_number=player_number,
+        )
 
-    def move(self, our_pieces, opponent_pieces):
-        return
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     return
 
 
 class Knight(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="knight", piece_icon="♞", position=position)
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="knight",
+            piece_icon="♞",
+            position=position,
+            player_number=player_number,
+        )
 
-    def move(self, our_pieces, opponent_pieces):
-        return
+    # def can_move_to(
+    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    # ):
+    #     return
 
 
 class Pawn(Piece):
-    def __init__(self, color, position):
-        super().__init__(color=color, name="pawn", piece_icon="♟", position=position)
-
-    def move(self, our_pieces, opponent_pieces):
-        return
-
+    def __init__(self, color, position, player_number):
+        super().__init__(
+            color=color,
+            name="pawn",
+            piece_icon="♟",
+            position=position,
+            player_number=player_number,
+        )
