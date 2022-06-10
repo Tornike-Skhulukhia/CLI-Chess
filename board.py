@@ -220,13 +220,13 @@ class Board:
 
                 if killed_pieces_to_draw:
                     # left padding
-                    print(" " * 5, end="")
+                    print(" " * 2, end="")
 
                     # killed pieces
                     for piece in killed_pieces_to_draw:
                         print(
                             f"[{piece.color} on {self._black_cell_color}]{piece.piece_icon}[/]",
-                            end=" ",
+                            end="",
                         )
 
             # display errors if any
@@ -318,5 +318,6 @@ class Board:
             print(f"len(self.player_2_pieces")
 
         self._to_cell = _to
+        self._from_cell = _from
 
         return True
