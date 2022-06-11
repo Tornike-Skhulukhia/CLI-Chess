@@ -11,6 +11,7 @@ from util import (
     _top_coords,
     _top_left_coords,
     _top_right_coords,
+    get_lineraly_distant_cells_from_position,
 )
 
 
@@ -163,10 +164,29 @@ class Queen(Piece):
             player_number=player_number,
         )
 
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     return
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+
+        return get_lineraly_distant_cells_from_position(
+            position=self.position,
+            positions_to_pieces=positions_to_pieces,
+            player_turn=player_turn,
+            linearity_functions=[
+                # bishop-like moves
+                _top_left_coords,
+                _top_right_coords,
+                _bottom_left_coords,
+                _bottom_right_coords,
+                # rook-like moves
+                _top_coords,
+                _bottom_coords,
+                _left_coords,
+                _right_coords,
+            ],
+        )
 
 
 class Rook(Piece):
@@ -179,10 +199,22 @@ class Rook(Piece):
             player_number=player_number,
         )
 
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     return
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+        return get_lineraly_distant_cells_from_position(
+            position=self.position,
+            positions_to_pieces=positions_to_pieces,
+            player_turn=player_turn,
+            linearity_functions=[
+                _top_coords,
+                _bottom_coords,
+                _left_coords,
+                _right_coords,
+            ],
+        )
 
 
 class Bishop(Piece):
@@ -200,34 +232,18 @@ class Bishop(Piece):
         player_turn,
         positions_to_pieces,
     ):
-        possible_moves_to_killed_pieces = {}
 
-        for func_to_apply in [
-            _top_left_coords,
-            _top_right_coords,
-            _bottom_left_coords,
-            _bottom_right_coords,
-        ]:
-            curr_cell = func_to_apply(self.position)
-
-            for _ in range(7):
-                if not _is_chess_cell_coord(curr_cell):
-                    break
-
-                # some piece found there
-                if curr_cell in positions_to_pieces:
-                    # it is not our piece
-                    if positions_to_pieces[curr_cell].player_number != player_turn:
-                        possible_moves_to_killed_pieces[
-                            curr_cell
-                        ] = positions_to_pieces[curr_cell]
-                    break
-                else:
-                    possible_moves_to_killed_pieces[curr_cell] = None
-
-                curr_cell = func_to_apply(curr_cell)
-
-        return possible_moves_to_killed_pieces
+        return get_lineraly_distant_cells_from_position(
+            position=self.position,
+            positions_to_pieces=positions_to_pieces,
+            player_turn=player_turn,
+            linearity_functions=[
+                _top_left_coords,
+                _top_right_coords,
+                _bottom_left_coords,
+                _bottom_right_coords,
+            ],
+        )
 
 
 class Knight(Piece):

@@ -93,3 +93,46 @@ def _bottom_right_coords(from_cell) -> str:
 def _bottom_coords(from_cell) -> str:
     col, row = from_cell
     return col + str(int(row) - 1)
+
+
+#
+def get_lineraly_distant_cells_from_position(
+    position, positions_to_pieces, player_turn, linearity_functions
+):
+    """
+    ex, lets say we got cell E4 and 2 linearity functions and 4 functions
+    that get next cells based on top, bottom, left and right positions of current
+    cells respectively, then this function will try to follow from
+    given position cell to given function-orienting cells until it can and
+    return resulting cells to opposite player pieces dictionary that will be useful
+    in outer functions that decide where the piece can move.
+
+    We plan to use this function with diagonal functions for Bishop, with straight functions
+    for Rook and with linear and straight functions for Queen.
+
+    Having it written one place is better than having in multiple places, also its usage will be
+    super easy from callers.
+    """
+    possible_moves_to_killed_pieces = {}
+
+    for func_to_apply in linearity_functions:
+        curr_cell = func_to_apply(position)
+
+        for _ in range(7):
+            if not _is_chess_cell_coord(curr_cell):
+                break
+
+            # some piece found there
+            if curr_cell in positions_to_pieces:
+                # it is not our piece
+                if positions_to_pieces[curr_cell].player_number != player_turn:
+                    possible_moves_to_killed_pieces[curr_cell] = positions_to_pieces[
+                        curr_cell
+                    ]
+                break
+            else:
+                possible_moves_to_killed_pieces[curr_cell] = None
+
+            curr_cell = func_to_apply(curr_cell)
+
+    return possible_moves_to_killed_pieces
