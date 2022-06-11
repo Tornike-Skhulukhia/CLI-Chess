@@ -137,8 +137,6 @@ class Piece(metaclass=abc.ABCMeta):
         return can_move_there, killed_opponent_piece
 
 
-
-
 class King(Piece):
     def __init__(self, color, position, player_number):
         super().__init__(
@@ -197,10 +195,39 @@ class Bishop(Piece):
             player_number=player_number,
         )
 
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     return
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+        possible_moves_to_killed_pieces = {}
+
+        for func_to_apply in [
+            _top_left_coords,
+            _top_right_coords,
+            _bottom_left_coords,
+            _bottom_right_coords,
+        ]:
+            curr_cell = func_to_apply(self.position)
+
+            for _ in range(7):
+                if not _is_chess_cell_coord(curr_cell):
+                    break
+
+                # some piece found there
+                if curr_cell in positions_to_pieces:
+                    # it is not our piece
+                    if positions_to_pieces[curr_cell].player_number != player_turn:
+                        possible_moves_to_killed_pieces[
+                            curr_cell
+                        ] = positions_to_pieces[curr_cell]
+                    break
+                else:
+                    possible_moves_to_killed_pieces[curr_cell] = None
+
+                curr_cell = func_to_apply(curr_cell)
+
+        return possible_moves_to_killed_pieces
 
 
 class Knight(Piece):
