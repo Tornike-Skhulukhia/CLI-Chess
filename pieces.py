@@ -137,6 +137,8 @@ class Piece(metaclass=abc.ABCMeta):
         return can_move_there, killed_opponent_piece
 
 
+
+
 class King(Piece):
     def __init__(self, color, position, player_number):
         super().__init__(
