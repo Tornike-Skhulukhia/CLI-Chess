@@ -1,4 +1,17 @@
 import abc
+import copy
+from util import (
+    _bottom_coords,
+    _bottom_left_coords,
+    _bottom_right_coords,
+    _current_player_has_check_in_position,
+    _is_chess_cell_coord,
+    _left_coords,
+    _right_coords,
+    _top_coords,
+    _top_left_coords,
+    _top_right_coords,
+)
 
 
 class Piece(metaclass=abc.ABCMeta):
@@ -8,16 +21,34 @@ class Piece(metaclass=abc.ABCMeta):
         self.player_number = player_number
         self.piece_icon = piece_icon
         self._position = position
+        self.moves_count = 0
 
     def __repr__(self):
         return (
             f"""{self.color} {self.piece_icon} on """
-            f"""{self.position} ({self.index_based_position})""".title()
+            f"""{self.position} {self.index_based_position}""".title()
         )
+
+    def increase_moves_count(self):
+        self.moves_count += 1
 
     @property
     def position(self):
         return self._position
+
+    @property
+    def current_row(self) -> int:
+        """
+        ex: for E2 --> 2
+        """
+        return int(self.position[1])
+
+    @property
+    def current_col(self) -> str:
+        """
+        ex: for E2 --> E
+        """
+        return int(self.position[1])
 
     @position.setter
     def position(self, position):
@@ -66,29 +97,42 @@ class Piece(metaclass=abc.ABCMeta):
         return result
 
     # @abc.abstractmethod
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     """
-    #     Move object to new location if
-    #     combination of pieces on board allows it
-    #     """
-    #     raise NotImplementedError
-
-    def can_move_to(
-        self, new_position, player_pieces, opponent_pieces, positions_to_pieces
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self, player_turn, positions_to_pieces
     ):
-        # is move valid for this piece
-        can_move_there = True
-        killed_opponent_piece = None
+        raise NotImplementedError
 
-        # will opponent piece be killed with this move?
-        if (
-            new_position in positions_to_pieces
-            and positions_to_pieces[new_position].player_number
-            != player_pieces[0].player_number
-        ):
-            killed_opponent_piece = positions_to_pieces[new_position]
+    def can_move_to(self, new_position, board_state):
+        """
+        Todo: also add error messages for invalid moves, explaining why it is not possible - good for debugging/fixing and user/s
+        """
+        killed_opponent_piece = None
+        can_move_there = False
+
+        # todo: make sure if we have check and are moving cases work as expected...
+
+        # according to rules can piece move there ?
+        _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
+            board_state._player_turn, board_state.positions_to_pieces
+        )
+
+        # filter out not on board moves
+        possible_moves = {
+            i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
+        }
+
+        print(f"{possible_moves=}")
+
+        if new_position in possible_moves:
+            # and no check after moving there will be present for current player
+            copied_board_state = copy.deepcopy(board_state)
+            copied_board_state.positions_to_pieces[
+                self.position
+            ].position = new_position
+
+            if not _current_player_has_check_in_position(self, copied_board_state):
+                killed_opponent_piece = possible_moves[new_position]
+                can_move_there = True
 
         return can_move_there, killed_opponent_piece
 
@@ -167,10 +211,46 @@ class Knight(Piece):
             player_number=player_number,
         )
 
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     return
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+        possible_moves_to_killed_pieces = {}
+        possible_moves = []
+
+        _pos = self.position
+        _top = _top_coords(_pos)
+        _bottom = _bottom_coords(_pos)
+        _left = _left_coords(_pos)
+        _right = _right_coords(_pos)
+
+        # get all possible places, performance is not issue for now
+        possible_moves = [
+            # top
+            _top_left_coords(_top),
+            _top_right_coords(_top),
+            # bottom
+            _bottom_left_coords(_bottom),
+            _bottom_right_coords(_bottom),
+            # left
+            _top_left_coords(_left),
+            _bottom_left_coords(_left),
+            # right
+            _top_right_coords(_right),
+            _bottom_right_coords(_right),
+        ]
+
+        for move in possible_moves:
+            # empty destination cell
+            if move not in positions_to_pieces:
+                possible_moves_to_killed_pieces[move] = None
+
+            # opponent piece on cell
+            elif positions_to_pieces[move].player_number != player_turn:
+                possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+
+        return possible_moves_to_killed_pieces
 
 
 class Pawn(Piece):
@@ -182,3 +262,62 @@ class Pawn(Piece):
             position=position,
             player_number=player_number,
         )
+
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+        possible_moves_to_killed_pieces = {}
+
+        # 1 up | no kill
+        top_cell = (
+            _top_coords(self.position)
+            if player_turn == 1
+            else _bottom_coords(self.position)
+        )
+
+        if top_cell not in positions_to_pieces:
+            possible_moves_to_killed_pieces[top_cell] = None
+
+            # 2 up | no kill
+            if self.moves_count == 0:
+                top_top_cell = (
+                    _top_coords(top_cell)
+                    if player_turn == 1
+                    else _bottom_coords(top_cell)
+                )
+
+                if top_top_cell not in positions_to_pieces:
+                    possible_moves_to_killed_pieces[top_top_cell] = None
+
+        # up left | kill
+        top_left = (
+            _top_left_coords(self.position)
+            if player_turn == 1
+            else _bottom_right_coords(self.position)
+        )
+        if (
+            positions_to_pieces.get(top_left)
+            and positions_to_pieces.get(top_left).player_number != player_turn
+        ):
+            possible_moves_to_killed_pieces[top_left] = positions_to_pieces[top_left]
+
+        # up right | kill
+        top_right = (
+            _top_right_coords(self.position)
+            if player_turn == 1
+            else _bottom_left_coords(self.position)
+        )
+        if (
+            positions_to_pieces.get(top_right)
+            and positions_to_pieces.get(top_right).player_number != player_turn
+        ):
+            possible_moves_to_killed_pieces[top_right] = positions_to_pieces[top_right]
+
+        ### TO-BE-IMPLEMENTED
+        # exchange pawn to queen if at the end of opposite side
+        # En passant
+        ### end TO-BE-IMPLEMENTED
+
+        return possible_moves_to_killed_pieces

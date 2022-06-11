@@ -25,7 +25,7 @@ class Board:
         # also needed
         self.player_1_pieces = []
         self.player_2_pieces = []
-        self.positions_to_piece = {}
+        # self.positions_to_pieces = {}
         self.killed_opponent_pieces = {1: [], 2: []}
 
         self._from_cell = None
@@ -35,10 +35,18 @@ class Board:
 
         self.errors_to_display = []
 
+        self._player_turn = 1
+
         self._initialize_pieces()
 
     def __repr__(self):
         return f"Board {self._cells}"
+
+    def _swap_player_turn(self):
+        if self._player_turn == 1:
+            self._player_turn = 2
+        else:
+            self._player_turn = 1
 
     def _add_temporary_error(self, error_text):
         self.errors_to_display.append(error_text)
@@ -159,11 +167,13 @@ class Board:
     def _clear_screen():
         os.system("clear")
 
-    def draw(self, player_turn):
+    def draw(self, debug_mode=False):
         """
         Draw all pieces where they are belonging to, with given params
         """
-        self._clear_screen()
+        if not debug_mode:
+            self._clear_screen()
+
         print()
 
         # later rewrite this function, so that we generate some data structure
@@ -195,16 +205,16 @@ class Board:
 
             # show which player's turn it is
             if row_index == 0:
-                if player_turn == 2:
-                    print(f"[{self.p2_color}]⬤[/]", end="")
+                if self._player_turn == 2:
+                    print(f"[{self.p2_color}] ⬤[/]", end="")
                 else:
-                    print(f" ", end="")
+                    print(f"  ", end="")
 
             if row_index == 7:
-                if player_turn == 1:
-                    print(f"[{self.p1_color}]⬤[/]", end="")
+                if self._player_turn == 1:
+                    print(f"[{self.p1_color}] ⬤[/]", end="")
                 else:
-                    print(f" ", end="")
+                    print(f"  ", end="")
 
             # display killed pieces if any
             if row_index in (0, 7):
@@ -251,28 +261,22 @@ class Board:
         # reset errors after every frame update
         self._reset_errors()
 
-    def move_a_piece_if_possible_and_add_validation_errors_if_necessary(
-        self, move_str, player_turn
-    ):
+    def move_a_piece_if_possible_and_add_validation_errors_if_necessary(self, move_str):
         """'
         args:
             1. move_str - ex: "E2 E4"
-            2. player_turn - 1 or 2, for player number
 
         if move is not possible, return False,
         otherwise change piece positions and return True
         """
         _from, _to = move_str.split()
 
-        # if player_turn == 2:
-        #     breakpoint()
-
         ### make a move only if space is empty for now
         ### and move player is trying to make starts from his/her piece
         ### later add other all sorts of necessary checks
 
         # player tries to move his/her piece
-        if player_turn == 1:
+        if self._player_turn == 1:
             player_pieces = self.player_1_pieces
             opponent_pieces = self.player_2_pieces
         else:
@@ -296,11 +300,11 @@ class Board:
 
         # can that piece make that move ?
         move_is_valid, killed_opponent_piece = piece.can_move_to(
-            _to,
-            player_pieces=player_pieces,
-            opponent_pieces=opponent_pieces,
-            positions_to_pieces=self.positions_to_pieces,
+            new_position=_to, board_state=self
         )
+
+        print(f"{move_is_valid=}, {killed_opponent_piece=}")
+
         if move_is_valid:
             piece.position = _to
         else:
@@ -312,12 +316,15 @@ class Board:
             print(f"Killing {killed_opponent_piece}")
             # we may also add and show score calculations like queen = 9 pawns, e.t.c
             # who is behinde and how e.t.c
-            self.killed_opponent_pieces[player_turn].append(killed_opponent_piece)
-            print(f"len(self.player_2_pieces")
-            self._remove_piece_from_pieces(killed_opponent_piece, player_turn)
-            print(f"len(self.player_2_pieces")
+            self.killed_opponent_pieces[self._player_turn].append(killed_opponent_piece)
+            print(f"{len(self.player_1_pieces)=}")
+
+            self._remove_piece_from_pieces(killed_opponent_piece, self._player_turn)
+            print(f"{len(self.player_2_pieces)=}")
 
         self._to_cell = _to
         self._from_cell = _from
+
+        piece.increase_moves_count()
 
         return True

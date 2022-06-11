@@ -4,6 +4,7 @@ import time
 from rich import print
 
 from board import Board
+from util import _is_chess_move_str
 
 
 class Game:
@@ -44,50 +45,14 @@ class Game:
         self._game_status = "initial"
         self._player_turn = 1  # which player should make a move, first, or second
 
-    @staticmethod
-    def _is_move_str(move):
-        """
-        Just validate that move has proper format, not any logic yet
-
-        Format:
-            "E2 E4" - not case sensitive
-        """
-        move = move.upper().strip()
-        parts = move.split()
-
-        print(f"Checking move {move}")
-
-        try:
-            if all(
-                [
-                    len(parts) == 2,
-                    len(parts[0]) == 2,
-                    len(parts[1]) == 2,
-                    parts[0][0] in "ABCDEFGH",
-                    parts[1][0] in "ABCDEFGH",
-                    parts[0][1] in "12345678",
-                    parts[1][1] in "12345678",
-                ]
-            ):
-                return move
-        except:
-            return False
-        return False
-
     def _get_next_move_and_add_error_if_necessary(self):
         move_str = input("Make a move\n").upper()
-        move_is_valid = self._is_move_str(move_str)
+        move_is_valid = _is_chess_move_str(move_str)
 
         if not move_is_valid:
             self.board._add_temporary_error("Not a move, try again")
 
         return move_str, move_is_valid
-
-    def _swap_player_turn(self):
-        if self._player_turn == 1:
-            self._player_turn = 2
-        else:
-            self._player_turn = 1
 
     def play(self):
         print("Game Started")
@@ -99,7 +64,7 @@ class Game:
         while self._game_status == "running":
 
             # draw new board
-            self.board.draw(self._player_turn)
+            self.board.draw(debug_mode=1)
 
             # get move
             move_str, _move_is_valid = self._get_next_move_and_add_error_if_necessary()
@@ -109,9 +74,9 @@ class Game:
                 continue
 
             if self.board.move_a_piece_if_possible_and_add_validation_errors_if_necessary(
-                move_str, self._player_turn
+                move_str
             ):
-                self._swap_player_turn()
+                self.board._swap_player_turn()
 
             time.sleep(0.1)
 
