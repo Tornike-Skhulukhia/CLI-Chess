@@ -96,7 +96,7 @@ def _bottom_coords(from_cell) -> str:
 
 
 #
-def get_lineraly_distant_cells_from_position(
+def get_linearly_distant_cells_from_position(
     position, positions_to_pieces, player_turn, linearity_functions
 ):
     """

@@ -11,7 +11,7 @@ from util import (
     _top_coords,
     _top_left_coords,
     _top_right_coords,
-    get_lineraly_distant_cells_from_position,
+    get_linearly_distant_cells_from_position,
 )
 
 
@@ -105,7 +105,8 @@ class Piece(metaclass=abc.ABCMeta):
 
     def can_move_to(self, new_position, board_state):
         """
-        Todo: also add error messages for invalid moves, explaining why it is not possible - good for debugging/fixing and user/s
+        Todo: also add error messages for invalid moves, 
+        explaining why it is not possible - good for debugging/fixing and user/s
         """
         killed_opponent_piece = None
         can_move_there = False
@@ -148,10 +149,39 @@ class King(Piece):
             player_number=player_number,
         )
 
-    # def can_move_to(
-    #     self, new_position, player_pieces, opponent_pieces, positions_to_pieces
-    # ):
-    #     return
+    def get_all_possible_moves_and_killed_pieces_if_moved(
+        self,
+        player_turn,
+        positions_to_pieces,
+    ):
+        possible_moves_to_killed_pieces = {}
+
+        possible_moves = []
+
+        _pos = self.position
+
+        # get all possible places, performance is not issue for now
+        possible_moves = [
+            _top_coords(_pos),
+            _bottom_coords(_pos),
+            _left_coords(_pos),
+            _right_coords(_pos),
+            _top_left_coords(_pos),
+            _top_right_coords(_pos),
+            _bottom_left_coords(_pos),
+            _bottom_right_coords(_pos),
+        ]
+
+        for move in possible_moves:
+            # empty destination cell
+            if move not in positions_to_pieces:
+                possible_moves_to_killed_pieces[move] = None
+
+            # opponent piece on cell
+            elif positions_to_pieces[move].player_number != player_turn:
+                possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+
+        return possible_moves_to_killed_pieces
 
 
 class Queen(Piece):
@@ -170,7 +200,7 @@ class Queen(Piece):
         positions_to_pieces,
     ):
 
-        return get_lineraly_distant_cells_from_position(
+        return get_linearly_distant_cells_from_position(
             position=self.position,
             positions_to_pieces=positions_to_pieces,
             player_turn=player_turn,
@@ -204,7 +234,7 @@ class Rook(Piece):
         player_turn,
         positions_to_pieces,
     ):
-        return get_lineraly_distant_cells_from_position(
+        return get_linearly_distant_cells_from_position(
             position=self.position,
             positions_to_pieces=positions_to_pieces,
             player_turn=player_turn,
@@ -233,7 +263,7 @@ class Bishop(Piece):
         positions_to_pieces,
     ):
 
-        return get_lineraly_distant_cells_from_position(
+        return get_linearly_distant_cells_from_position(
             position=self.position,
             positions_to_pieces=positions_to_pieces,
             player_turn=player_turn,
