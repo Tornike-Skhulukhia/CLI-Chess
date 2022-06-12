@@ -25,10 +25,7 @@ class Piece(metaclass=abc.ABCMeta):
         self.moves_count = 0
 
     def __repr__(self):
-        return (
-            f"""{self.color} {self.piece_icon} on """
-            f"""{self.position} {self.index_based_position}""".title()
-        )
+        return f"{self.color} {self.piece_icon} on {self.position}".title()
 
     def increase_moves_count(self):
         self.moves_count += 1
@@ -154,6 +151,10 @@ class Piece(metaclass=abc.ABCMeta):
         if new_position in possible_moves:
             # and no check after moving there will be present for current player
             copied_board_state = copy.deepcopy(board_state)
+
+            if possible_moves[new_position]:
+                copied_board_state.kill_piece(possible_moves[new_position])
+
             copied_board_state.positions_to_pieces[
                 self.position
             ].position = new_position

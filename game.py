@@ -66,6 +66,11 @@ class Game:
             # draw new board
             self.board.draw(debug_mode=1)
 
+            if self.board.current_player_is_checkmated():
+                self.board._add_temporary_error("You lost the game!")
+                self.board.draw(debug_mode=1)
+                return
+
             # get move
             move_str, _move_is_valid = self._get_next_move_and_add_error_if_necessary()
 
@@ -82,7 +87,7 @@ class Game:
                 if _player_has_check_in_position(
                     check_for_current_player=True, board_state=self.board
                 ):
-                    self.board._add_temporary_error("Check, save your Queen MR/MS")
+                    self.board._add_temporary_error("Check, save your King")
 
             time.sleep(0.1)
 

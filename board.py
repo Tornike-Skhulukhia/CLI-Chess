@@ -1,9 +1,10 @@
+import copy
 import os
 
 from rich import print
 
-from pieces import Bishop, King, Knight, Pawn, Queen, Rook, Piece
-from util import _player_has_check_in_position
+from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
+from util import _is_chess_cell_coord, _player_has_check_in_position
 
 # from rich import Console
 
@@ -42,8 +43,6 @@ class Board:
 
     def __repr__(self):
         return f"<Board object>"
-
-
 
     @property
     def current_player_pieces(self):
@@ -268,7 +267,7 @@ class Board:
                     # padding from board
                     " " * 5,
                     # actual error message
-                    f"[red]{error_text}[/]",
+                    f"[yellow]{error_text}[/]",
                     end="",
                 )
 
@@ -281,6 +280,19 @@ class Board:
 
         # reset errors after every frame update
         self._reset_errors()
+
+    def kill_piece(self, killed_opponent_piece):
+        """
+        Remove piece from player pieces list and
+        add into other players killed pieces list
+        """
+
+        killer_player_number = 1 if killed_opponent_piece.player_number == 2 else 2
+
+        self.killed_opponent_pieces[killer_player_number].append(killed_opponent_piece)
+        self._remove_piece_from_pieces(
+            killed_opponent_piece, killed_opponent_piece.player_number
+        )
 
     def move_a_piece_if_possible_and_add_validation_errors_if_necessary(self, move_str):
         """'
@@ -325,8 +337,8 @@ class Board:
             print(f"Killing {killed_opponent_piece}")
             # we may also add and show score calculations like queen = 9 pawns, e.t.c
             # who is behinde and how e.t.c
-            self.killed_opponent_pieces[self._player_turn].append(killed_opponent_piece)
-            self._remove_piece_from_pieces(killed_opponent_piece, self._player_turn)
+
+            self.kill_piece(killed_opponent_piece)
 
             print(f"{len(self.player_1_pieces)=}")
             print(f"{len(self.player_2_pieces)=}")
@@ -335,5 +347,42 @@ class Board:
         self._from_cell = _from
 
         piece.increase_moves_count()
+
+        return True
+
+    def current_player_is_checkmated(self):
+
+        for piece in self.current_player_pieces:
+            _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
+                self.positions_to_pieces
+            )
+
+            # filter out not on board moves
+            possible_moves = {
+                i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
+            }
+
+            # leave moves after which no checks are against current player
+            # and no check after moving there will be present for current player
+
+            for new_position, killed_opponent_piece in possible_moves.items():
+                # in this hypothetical new state
+                copied_board_state = copy.deepcopy(self)
+
+                # if move killes something, remove it from board
+                if killed_opponent_piece:
+                    copied_board_state.kill_piece(killed_opponent_piece)
+
+                # move piece to given new position
+                copied_board_state.positions_to_pieces[
+                    piece.position
+                ].position = new_position
+
+                if not _player_has_check_in_position(
+                    check_for_current_player=True,
+                    board_state=copied_board_state,
+                ):
+                    self._add_temporary_error(f"1 way out of check: {piece} to {new_position}")
+                    return False
 
         return True
