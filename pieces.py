@@ -4,14 +4,14 @@ from util import (
     _bottom_coords,
     _bottom_left_coords,
     _bottom_right_coords,
-    _current_player_has_check_in_position,
+    _player_has_check_in_position,
     _is_chess_cell_coord,
     _left_coords,
     _right_coords,
     _top_coords,
     _top_left_coords,
     _top_right_coords,
-    get_linearly_distant_cells_from_position,
+    get_linearly_distant_cells_from_piece_position,
 )
 
 
@@ -32,6 +32,10 @@ class Piece(metaclass=abc.ABCMeta):
 
     def increase_moves_count(self):
         self.moves_count += 1
+
+    @property
+    def piece_name(self):
+        return type(self).__name__.lower()
 
     @property
     def position(self):
@@ -99,13 +103,35 @@ class Piece(metaclass=abc.ABCMeta):
 
     # @abc.abstractmethod
     def get_all_possible_moves_and_killed_pieces_if_moved(
-        self, player_turn, positions_to_pieces
+        self,
+        positions_to_pieces,
+        return_defended_cells=False,
     ):
         raise NotImplementedError
 
+    def get_all_possible_cells_where_this_piece_can_kill(self, positions_to_pieces):
+        (
+            defended_cells,
+            moving_cells,
+        ) = self.get_all_possible_moves_and_killed_pieces_if_moved(
+            positions_to_pieces,
+            return_defended_cells=True,
+        )
+
+        # pawns can only kill where they defend
+        if self.piece_name == "pawn":
+            return defended_cells
+
+        defended_cells.extend(list(moving_cells.keys()))
+
+        # clean defended_cells as they may have offboard values
+        defended_cells = [i for i in defended_cells if _is_chess_cell_coord(i)]
+
+        return defended_cells
+
     def can_move_to(self, new_position, board_state):
         """
-        Todo: also add error messages for invalid moves, 
+        Todo: also add error messages for invalid moves,
         explaining why it is not possible - good for debugging/fixing and user/s
         """
         killed_opponent_piece = None
@@ -115,7 +141,7 @@ class Piece(metaclass=abc.ABCMeta):
 
         # according to rules can piece move there ?
         _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
-            board_state._player_turn, board_state.positions_to_pieces
+            board_state.positions_to_pieces
         )
 
         # filter out not on board moves
@@ -123,7 +149,7 @@ class Piece(metaclass=abc.ABCMeta):
             i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
         }
 
-        print(f"{possible_moves=}")
+        print(f"possible_moves_before_checking_for_checks:{possible_moves}")
 
         if new_position in possible_moves:
             # and no check after moving there will be present for current player
@@ -132,7 +158,10 @@ class Piece(metaclass=abc.ABCMeta):
                 self.position
             ].position = new_position
 
-            if not _current_player_has_check_in_position(self, copied_board_state):
+            if not _player_has_check_in_position(
+                check_for_current_player=True,
+                board_state=copied_board_state,
+            ):
                 killed_opponent_piece = possible_moves[new_position]
                 can_move_there = True
 
@@ -151,11 +180,11 @@ class King(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
         possible_moves_to_killed_pieces = {}
-
+        defended_cells = []
         possible_moves = []
 
         _pos = self.position
@@ -178,8 +207,14 @@ class King(Piece):
                 possible_moves_to_killed_pieces[move] = None
 
             # opponent piece on cell
-            elif positions_to_pieces[move].player_number != player_turn:
+            elif positions_to_pieces[move].player_number != self.player_number:
                 possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+            # our piece on cell
+            else:
+                defended_cells.append(move)
+
+        if return_defended_cells:
+            return defended_cells, possible_moves_to_killed_pieces
 
         return possible_moves_to_killed_pieces
 
@@ -196,14 +231,13 @@ class Queen(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
 
-        return get_linearly_distant_cells_from_position(
-            position=self.position,
+        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+            piece=self,
             positions_to_pieces=positions_to_pieces,
-            player_turn=player_turn,
             linearity_functions=[
                 # bishop-like moves
                 _top_left_coords,
@@ -218,6 +252,11 @@ class Queen(Piece):
             ],
         )
 
+        if return_defended_cells:
+            return defended_cells, info
+
+        return info
+
 
 class Rook(Piece):
     def __init__(self, color, position, player_number):
@@ -231,13 +270,13 @@ class Rook(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
-        return get_linearly_distant_cells_from_position(
-            position=self.position,
+
+        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+            piece=self,
             positions_to_pieces=positions_to_pieces,
-            player_turn=player_turn,
             linearity_functions=[
                 _top_coords,
                 _bottom_coords,
@@ -245,6 +284,11 @@ class Rook(Piece):
                 _right_coords,
             ],
         )
+
+        if return_defended_cells:
+            return defended_cells, info
+
+        return info
 
 
 class Bishop(Piece):
@@ -259,14 +303,13 @@ class Bishop(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
 
-        return get_linearly_distant_cells_from_position(
-            position=self.position,
+        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+            piece=self,
             positions_to_pieces=positions_to_pieces,
-            player_turn=player_turn,
             linearity_functions=[
                 _top_left_coords,
                 _top_right_coords,
@@ -274,6 +317,11 @@ class Bishop(Piece):
                 _bottom_right_coords,
             ],
         )
+
+        if return_defended_cells:
+            return defended_cells, info
+
+        return info
 
 
 class Knight(Piece):
@@ -288,8 +336,8 @@ class Knight(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
         possible_moves_to_killed_pieces = {}
         possible_moves = []
@@ -316,14 +364,22 @@ class Knight(Piece):
             _bottom_right_coords(_right),
         ]
 
+        defended_cells = []
+
         for move in possible_moves:
             # empty destination cell
             if move not in positions_to_pieces:
                 possible_moves_to_killed_pieces[move] = None
 
             # opponent piece on cell
-            elif positions_to_pieces[move].player_number != player_turn:
+            elif positions_to_pieces[move].player_number != self.player_number:
                 possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+            # our piece
+            else:
+                defended_cells.append(move)
+
+        if return_defended_cells:
+            return defended_cells, possible_moves_to_killed_pieces
 
         return possible_moves_to_killed_pieces
 
@@ -340,15 +396,16 @@ class Pawn(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        player_turn,
         positions_to_pieces,
+        return_defended_cells=False,
     ):
         possible_moves_to_killed_pieces = {}
+        defended_cells = []
 
         # 1 up | no kill
         top_cell = (
             _top_coords(self.position)
-            if player_turn == 1
+            if self.player_number == 1
             else _bottom_coords(self.position)
         )
 
@@ -359,7 +416,7 @@ class Pawn(Piece):
             if self.moves_count == 0:
                 top_top_cell = (
                     _top_coords(top_cell)
-                    if player_turn == 1
+                    if self.player_number == 1
                     else _bottom_coords(top_cell)
                 )
 
@@ -369,30 +426,43 @@ class Pawn(Piece):
         # up left | kill
         top_left = (
             _top_left_coords(self.position)
-            if player_turn == 1
+            if self.player_number == 1
             else _bottom_right_coords(self.position)
         )
-        if (
-            positions_to_pieces.get(top_left)
-            and positions_to_pieces.get(top_left).player_number != player_turn
-        ):
-            possible_moves_to_killed_pieces[top_left] = positions_to_pieces[top_left]
+
+        if top_left in positions_to_pieces:
+            # opponent piece there
+            if positions_to_pieces[top_left].player_number != self.player_number:
+                possible_moves_to_killed_pieces[top_left] = positions_to_pieces[
+                    top_left
+                ]
+            # our piece there
+            else:
+                defended_cells.append(top_left)
 
         # up right | kill
         top_right = (
             _top_right_coords(self.position)
-            if player_turn == 1
+            if self.player_number == 1
             else _bottom_left_coords(self.position)
         )
-        if (
-            positions_to_pieces.get(top_right)
-            and positions_to_pieces.get(top_right).player_number != player_turn
-        ):
-            possible_moves_to_killed_pieces[top_right] = positions_to_pieces[top_right]
+
+        if top_right in positions_to_pieces:
+            # opponent piece there
+            if positions_to_pieces[top_right].player_number != self.player_number:
+                possible_moves_to_killed_pieces[top_right] = positions_to_pieces[
+                    top_right
+                ]
+            # our piece there
+            else:
+                defended_cells.append(top_right)
 
         ### TO-BE-IMPLEMENTED
         # exchange pawn to queen if at the end of opposite side
         # En passant
         ### end TO-BE-IMPLEMENTED
+
+        if return_defended_cells:
+            return defended_cells, possible_moves_to_killed_pieces
 
         return possible_moves_to_killed_pieces

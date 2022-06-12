@@ -3,6 +3,7 @@ import os
 from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Queen, Rook, Piece
+from util import _player_has_check_in_position
 
 # from rich import Console
 
@@ -40,7 +41,25 @@ class Board:
         self._initialize_pieces()
 
     def __repr__(self):
-        return f"Board {self._cells}"
+        return f"<Board object>"
+
+
+
+    @property
+    def current_player_pieces(self):
+        return [self.player_2_pieces, self.player_1_pieces][self._player_turn == 1]
+
+    @property
+    def opponent_player_pieces(self):
+        return [self.player_2_pieces, self.player_1_pieces][self._player_turn == 2]
+
+    @property
+    def current_player_king(self):
+        return [i for i in self.current_player_pieces if i.piece_name == "king"][0]
+
+    @property
+    def opponent_player_king(self):
+        return [i for i in self.opponent_player_pieces if i.piece_name == "king"][0]
 
     def _swap_player_turn(self):
         if self._player_turn == 1:
@@ -174,6 +193,8 @@ class Board:
         if not debug_mode:
             self._clear_screen()
 
+        print(f"{self.errors_to_display=}")
+
         print()
 
         # later rewrite this function, so that we generate some data structure
@@ -275,24 +296,12 @@ class Board:
         ### and move player is trying to make starts from his/her piece
         ### later add other all sorts of necessary checks
 
-        # player tries to move his/her piece
-        if self._player_turn == 1:
-            player_pieces = self.player_1_pieces
-            opponent_pieces = self.player_2_pieces
-        else:
-            player_pieces = self.player_2_pieces
-            opponent_pieces = self.player_1_pieces
-
-        player_pieces_positions = {i.position for i in player_pieces}
+        player_pieces_positions = {i.position for i in self.current_player_pieces}
 
         # do move checks
         if not _from in player_pieces_positions:
             self._add_temporary_error(f"Sorry, there is no your piece on cell {_from}")
             return False
-
-        # if _to in self.all_piece_positions:
-        #     self._add_temporary_error(f"Sorry, there is no other piece on cell {_to}")
-        #     return False
 
         # if all previous checks are done
         # get piece
@@ -305,11 +314,11 @@ class Board:
 
         print(f"{move_is_valid=}, {killed_opponent_piece=}")
 
-        if move_is_valid:
-            piece.position = _to
-        else:
+        if not move_is_valid:
             self._add_temporary_error("Invalid move")
             return False
+
+        piece.position = _to
 
         # breakpoint()
         if killed_opponent_piece:
@@ -317,9 +326,9 @@ class Board:
             # we may also add and show score calculations like queen = 9 pawns, e.t.c
             # who is behinde and how e.t.c
             self.killed_opponent_pieces[self._player_turn].append(killed_opponent_piece)
-            print(f"{len(self.player_1_pieces)=}")
-
             self._remove_piece_from_pieces(killed_opponent_piece, self._player_turn)
+
+            print(f"{len(self.player_1_pieces)=}")
             print(f"{len(self.player_2_pieces)=}")
 
         self._to_cell = _to

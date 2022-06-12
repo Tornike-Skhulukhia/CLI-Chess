@@ -32,17 +32,41 @@ def _is_chess_move_str(move):
 
     try:
         assert len(parts) == 2
-
         return _is_chess_cell_coord(parts[0]) and _is_chess_cell_coord(parts[1])
-
     except Exception:
-
         return False
 
 
-def _current_player_has_check_in_position(self, board_state):
-    """ """
-    return False
+def _player_has_check_in_position(check_for_current_player, board_state):
+
+    # check if current player has check
+    if check_for_current_player:
+        king_position = board_state.current_player_king.position
+        opponent_pieces = board_state.opponent_player_pieces
+    # check if opponent has check
+    else:
+        king_position = board_state.opponent_player_king.position
+        opponent_pieces = board_state.current_player_pieces
+
+    # get all possible killing moves that opponent pieces can make
+    # for pawns, we care only about killing cells here, as they can't push King forward :-)
+    cells_on_which_opponent_can_kill_piece = set()
+
+    for piece in opponent_pieces:
+        cells = piece.get_all_possible_cells_where_this_piece_can_kill(
+            positions_to_pieces=board_state.positions_to_pieces,
+        )
+        # print(piece, cells)
+        # if piece.piece_name == "queen":
+        #     print("==================")
+        #     print("==================")
+        #     print("==================")
+        #     breakpoint()
+        cells_on_which_opponent_can_kill_piece.update(cells)
+
+    has_check = king_position in cells_on_which_opponent_can_kill_piece
+
+    return has_check
 
 
 # next move calculation helpers, without validation
@@ -95,9 +119,8 @@ def _bottom_coords(from_cell) -> str:
     return col + str(int(row) - 1)
 
 
-#
-def get_linearly_distant_cells_from_position(
-    position, positions_to_pieces, player_turn, linearity_functions
+def get_linearly_distant_cells_from_piece_position(
+    piece, positions_to_pieces, linearity_functions
 ):
     """
     ex, lets say we got cell E4 and 2 linearity functions and 4 functions
@@ -115,8 +138,11 @@ def get_linearly_distant_cells_from_position(
     """
     possible_moves_to_killed_pieces = {}
 
+    # useful, as we can not kill our piece here, but we defend them, so their King cant kill them
+    current_player_cells_that_are_defended_by_this_piece = []
+
     for func_to_apply in linearity_functions:
-        curr_cell = func_to_apply(position)
+        curr_cell = func_to_apply(piece.position)
 
         for _ in range(7):
             if not _is_chess_cell_coord(curr_cell):
@@ -125,14 +151,23 @@ def get_linearly_distant_cells_from_position(
             # some piece found there
             if curr_cell in positions_to_pieces:
                 # it is not our piece
-                if positions_to_pieces[curr_cell].player_number != player_turn:
+                if positions_to_pieces[curr_cell].player_number != piece.player_number:
                     possible_moves_to_killed_pieces[curr_cell] = positions_to_pieces[
                         curr_cell
                     ]
+
+                # defending our piece
+                else:
+                    current_player_cells_that_are_defended_by_this_piece.append(
+                        positions_to_pieces[curr_cell]
+                    )
                 break
             else:
                 possible_moves_to_killed_pieces[curr_cell] = None
 
             curr_cell = func_to_apply(curr_cell)
 
-    return possible_moves_to_killed_pieces
+    return (
+        current_player_cells_that_are_defended_by_this_piece,
+        possible_moves_to_killed_pieces,
+    )

@@ -4,7 +4,7 @@ import time
 from rich import print
 
 from board import Board
-from util import _is_chess_move_str
+from util import _is_chess_move_str, _player_has_check_in_position
 
 
 class Game:
@@ -77,6 +77,12 @@ class Game:
                 move_str
             ):
                 self.board._swap_player_turn()
+
+                # after our move, does opponent has check?
+                if _player_has_check_in_position(
+                    check_for_current_player=True, board_state=self.board
+                ):
+                    self.board._add_temporary_error("Check, save your Queen MR/MS")
 
             time.sleep(0.1)
 
