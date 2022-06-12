@@ -69,6 +69,9 @@ class Board:
     def _add_temporary_error(self, error_text):
         self.errors_to_display.append(error_text)
 
+    def _add_temporary_error_at_first_position(self, error_text):
+        self.errors_to_display.insert(0, error_text)
+
     def _reset_errors(self):
         self.errors_to_display = []
 
@@ -125,8 +128,8 @@ class Board:
 
         print("Pieces Ready!!!")
 
-    def _remove_piece_from_pieces(self, piece_to_kill, piece_owner_player):
-        if piece_owner_player == 1:
+    def _remove_piece_from_pieces(self, piece_to_kill):
+        if piece_to_kill.player_number == 2:
             self.player_2_pieces = [
                 i for i in self.player_2_pieces if i is not piece_to_kill
             ]
@@ -193,7 +196,10 @@ class Board:
             self._clear_screen()
 
         print(f"{self.errors_to_display=}")
-
+        print()
+        print(f"{self.current_player_pieces=}")
+        print()
+        print(f"{self.opponent_player_pieces=}")
         print()
 
         # later rewrite this function, so that we generate some data structure
@@ -287,12 +293,14 @@ class Board:
         add into other players killed pieces list
         """
 
-        killer_player_number = 1 if killed_opponent_piece.player_number == 2 else 2
+        if killed_opponent_piece.player_number == 1:
+            killer_player_number = 2
+        else:
+            killer_player_number = 1
 
         self.killed_opponent_pieces[killer_player_number].append(killed_opponent_piece)
-        self._remove_piece_from_pieces(
-            killed_opponent_piece, killed_opponent_piece.player_number
-        )
+
+        self._remove_piece_from_pieces(killed_opponent_piece)
 
     def move_a_piece_if_possible_and_add_validation_errors_if_necessary(self, move_str):
         """'
@@ -351,6 +359,14 @@ class Board:
         return True
 
     def current_player_is_checkmated(self):
+        # no check -> no checkmate, easy
+        if not _player_has_check_in_position(
+            check_for_current_player=True, board_state=self
+        ):
+            return False
+
+        # to show check info
+        self._add_temporary_error("Check, save your King")
 
         for piece in self.current_player_pieces:
             _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
@@ -382,7 +398,9 @@ class Board:
                     check_for_current_player=True,
                     board_state=copied_board_state,
                 ):
-                    self._add_temporary_error(f"1 way out of check: {piece} to {new_position}")
+                    self._add_temporary_error_at_first_position(
+                        f"1 way out of check: {piece} to {new_position}"
+                    )
                     return False
 
         return True

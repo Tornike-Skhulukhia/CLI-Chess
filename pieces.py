@@ -25,7 +25,7 @@ class Piece(metaclass=abc.ABCMeta):
         self.moves_count = 0
 
     def __repr__(self):
-        return f"{self.color} {self.piece_icon} on {self.position}".title()
+        return f"Player {self.player_number} {self.piece_name.capitalize()} on {self.position}".title()
 
     def increase_moves_count(self):
         self.moves_count += 1
