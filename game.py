@@ -7,6 +7,9 @@ from board import Board
 from util import _is_chess_move_str, _player_has_check_in_position
 
 
+DEBUG_MODE = 1
+
+
 class Game:
     """
     Class to handle game initialization,
@@ -64,7 +67,7 @@ class Game:
         while self._game_status == "running":
 
             # draw new board
-            self.board.draw(debug_mode=1)
+            self.board.draw(debug_mode=DEBUG_MODE)
 
             # get move
             move_str, _move_is_valid = self._get_next_move_and_add_error_if_necessary()
@@ -78,17 +81,24 @@ class Game:
             ):
                 self.board._swap_player_turn()
 
-                # after our move, does opponent has check?
-                if _player_has_check_in_position(
-                    check_for_current_player=True, board_state=self.board
-                ):
-                    if self.board.current_player_is_checkmated():
-                        self.board._reset_errors()
-                        self.board._add_temporary_error("You lost the game!")
-                        self.board.draw(debug_mode=1)
-                        self._game_status = "Finished"
-                        return
+                # after our move, does opponent has check/checkmate?
+                if troubles := self.board.get_current_player_troubles():
+                    assert len(troubles) == 2
+                    assert troubles[0] == "check"
 
+                    # player has at least active check
+                    _, message = troubles
+
+                    if message != "checkmate":
+                        # will show message like :
+                        # f"1 way out of check: {piece} to {new_position}"
+                        self.board._add_temporary_error(message)
+                        self.board._add_temporary_error("Check!")
+                    else:
+                        # game over, current player lose
+                        self.board._add_temporary_error("You lost the game!")
+                        self._game_status = "Finished"
+                        self.board.draw(debug_mode=DEBUG_MODE)
 
             time.sleep(0.1)
 

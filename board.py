@@ -1,3 +1,9 @@
+"""
+Known bugs:
+    . cant kill piece that gives us check, even if it must be totaly OK in chess to do this
+"""
+
+
 import copy
 import os
 
@@ -197,9 +203,9 @@ class Board:
 
         print(f"{self.errors_to_display=}")
         print()
-        print(f"{self.current_player_pieces=}")
+        # print(f"{self.current_player_pieces=}")
         print()
-        print(f"{self.opponent_player_pieces=}")
+        # print(f"{self.opponent_player_pieces=}")
         print()
 
         # later rewrite this function, so that we generate some data structure
@@ -358,15 +364,13 @@ class Board:
 
         return True
 
-    def current_player_is_checkmated(self):
+    def get_current_player_troubles(self):
         # no check -> no checkmate, easy
         if not _player_has_check_in_position(
             check_for_current_player=True, board_state=self
         ):
-            return False
-
-        # to show check info
-        self._add_temporary_error("Check, save your King")
+            # no troubles
+            return []
 
         for piece in self.current_player_pieces:
             _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
@@ -398,9 +402,8 @@ class Board:
                     check_for_current_player=True,
                     board_state=copied_board_state,
                 ):
-                    self._add_temporary_error_at_first_position(
-                        f"1 way out of check: {piece} to {new_position}"
-                    )
-                    return False
 
-        return True
+                    return "check", f"1 way out of check: {piece} to {new_position}"
+
+        # player is checkmated if we went to this step
+        return "check", "checkmate"

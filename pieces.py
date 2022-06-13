@@ -153,7 +153,16 @@ class Piece(metaclass=abc.ABCMeta):
             copied_board_state = copy.deepcopy(board_state)
 
             if possible_moves[new_position]:
-                copied_board_state.kill_piece(possible_moves[new_position])
+                # piece in main board state pieces
+                killed_piece = possible_moves[new_position]
+
+                # piece in copied board state | for pawn killing, En_passant - killed piece position
+                # may be different than where new piece comes after killing, so
+                killed_piece_in_copied_universe = (
+                    copied_board_state.positions_to_pieces[killed_piece.position]
+                )
+
+                copied_board_state.kill_piece(killed_piece_in_copied_universe)
 
             copied_board_state.positions_to_pieces[
                 self.position
