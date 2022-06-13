@@ -1,6 +1,9 @@
 """
-Known bugs:
-    . cant kill piece that gives us check, even if it must be totaly OK in chess to do this
+Not implemented:
+    . an passant
+    . exchanging paqn to queen or other pieces when in the end...
+Bugs
+    . 
 """
 
 
