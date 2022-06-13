@@ -52,6 +52,19 @@ class Piece(metaclass=abc.ABCMeta):
         """
         return int(self.position[1])
 
+    @property
+    def chess_notation_prefix(self):
+        # no prefix for Pawns
+        if self.piece_name == "pawn":
+            return ""
+
+        # Knight has N as first letter, not K
+        if self.piece_name == "knight":
+            return "N"
+
+        # all others use uppercased first letter
+        return self.piece_name[0].upper()
+
     @position.setter
     def position(self, position):
 
@@ -176,6 +189,25 @@ class Piece(metaclass=abc.ABCMeta):
                 can_move_there = True
 
         return can_move_there, killed_opponent_piece
+
+    def make_a_move(
+        self,
+        new_position,
+        killed_opponent_piece,
+        board_state,
+    ):
+        self.position = new_position
+        self.increase_moves_count()
+
+        if killed_opponent_piece:
+            print(f"Killing {killed_opponent_piece}")
+            # we may also add and show score calculations like queen = 9 pawns, e.t.c
+            # who is behinde and how e.t.c
+
+            board_state.kill_piece(killed_opponent_piece)
+
+            print(f"{len(board_state.player_1_pieces)=}")
+            print(f"{len(board_state.player_2_pieces)=}")
 
 
 class King(Piece):

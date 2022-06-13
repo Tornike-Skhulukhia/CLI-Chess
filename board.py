@@ -1,19 +1,24 @@
 """
 Not implemented:
+    . king castling
     . an passant
-    . exchanging paqn to queen or other pieces when in the end...
+    . exchanging pawn to queen or other pieces when in the end...
 Bugs
     . 
 """
 
 
-import copy
 import os
 
 from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
-from util import _is_chess_cell_coord, _player_has_check_in_position
+from util import (
+    _is_chess_cell_coord,
+    _player_has_check_in_position,
+    convert_basic_move_notation_to_chess_notation,
+    _get_copied_hypothetical_board_state_if_this_move_happens,
+)
 
 # from rich import Console
 
@@ -48,10 +53,53 @@ class Board:
 
         self._player_turn = 1
 
+        self.total_moves_count = 0
+        self.moves = []
+        self.chess_notation_moves = []
+
         self._initialize_pieces()
 
     def __repr__(self):
         return f"<Board object>"
+
+    @classmethod
+    def from_chess_notation_moves(cls, moves):
+        """
+               Get list of moves written in chess notation like this:
+
+        # link for this specific game example - https://www.chess.com/games/view/15792867
+
+        [
+            ['d4', 'Nf6'],
+            ['c4', 'e6'],
+            ['Nf3', 'b6'],
+            ['g3', 'Bb7'],
+            ['Bg2', 'Bb4+'],
+            ['Bd2', 'c5'],
+            ['Bxb4', 'cxb4'],
+            ['O-O', 'O-O'],
+            ['Nbd2', 'a5'],
+            ['Re1', 'd6'],
+            ['e4', 'Nfd7'],
+            ['Qe2', 'e5'],
+            ['Rad1', 'Nc6'],
+            ['Nf1', 'Qf6'],
+            ['Ne3', 'Nxd4'],
+            ['Nxd4', 'exd4'],
+            ['e5', 'Qxe5'],
+            ['Bxb7', 'Ra7'],
+            ['Qg4', 'Nf6'],
+            ['Qxd4', 'Rxb7'],
+            ['Qxd6', 'Qxb2'],
+            ['Rd2', 'Qc3'],
+            ['Nd1', 'Re8'],
+            ['Rxe8+', 'Nxe8'],
+            ['Nxc3', '1-0']
+        ]
+
+        apply these moves to our board and return the resulting board configuration object.
+        """
+        return NotImplementedError
 
     @property
     def current_player_pieces(self):
@@ -83,6 +131,35 @@ class Board:
 
     def _reset_errors(self):
         self.errors_to_display = []
+
+    def update_moves_history(self, last_move_from, last_move_to):
+        """
+        We store 2 type of history, 1 with just moves like ("g1 f3", "e7 e5")
+
+        and other with official chess notation, like like ("Nf3", "e5")
+
+        ! Make sure to run this function before changing state of board after specific valid move
+        as it needs current playing state to make correct conversion of notations
+        """
+        # first player adds new move item in histories
+        if self.total_moves_count % 2 == 0:
+            self.moves.append([])
+            self.chess_notation_moves.append([])
+
+        ### update last move item
+        # for basic moves history
+        basic_move_str = f"{last_move_from.lower()} {last_move_to.lower()}"
+        self.moves[-1].append(basic_move_str)
+
+        # for chess notation history
+        chess_notation_move = convert_basic_move_notation_to_chess_notation(
+            basic_move_str=basic_move_str,
+            board_state_before_move=self,
+        )
+
+        self.chess_notation_moves[-1].append(chess_notation_move)
+
+        self.total_moves_count += 1
 
     def _initialize_pieces(self):
         """
@@ -168,6 +245,10 @@ class Board:
 
         return cell_color
 
+    def _update_last_move_on_board_info(self, _to, _from):
+        self._to_cell = _to
+        self._from_cell = _from
+
     @property
     def index_based_positions_to_pieces(self):
         index_based_positions_to_pieces = {
@@ -206,10 +287,14 @@ class Board:
 
         print(f"{self.errors_to_display=}")
         print()
-        # print(f"{self.current_player_pieces=}")
+        print(f"{self.moves=}")
         print()
-        # print(f"{self.opponent_player_pieces=}")
+        print(f"{self.chess_notation_moves=}")
         print()
+        # # print(f"{self.current_player_pieces=}")
+        # print()
+        # # print(f"{self.opponent_player_pieces=}")
+        # print()
 
         # later rewrite this function, so that we generate some data structure
         # that stores info about what to print and in what color and when,
@@ -347,33 +432,33 @@ class Board:
             self._add_temporary_error("Invalid move")
             return False
 
-        piece.position = _to
+        self.update_moves_history(last_move_from=_from, last_move_to=_to)
 
-        # breakpoint()
-        if killed_opponent_piece:
-            print(f"Killing {killed_opponent_piece}")
-            # we may also add and show score calculations like queen = 9 pawns, e.t.c
-            # who is behinde and how e.t.c
+        piece.make_a_move(
+            new_position=_to,
+            killed_opponent_piece=killed_opponent_piece,
+            board_state=self,
+        )
 
-            self.kill_piece(killed_opponent_piece)
-
-            print(f"{len(self.player_1_pieces)=}")
-            print(f"{len(self.player_2_pieces)=}")
-
-        self._to_cell = _to
-        self._from_cell = _from
-
-        piece.increase_moves_count()
+        self._update_last_move_on_board_info(_to=_to, _from=_from)
 
         return True
 
     def get_current_player_troubles(self):
+        return_me = {
+            "player_is_checked": False,
+            "player_is_checkmated": False,
+            "move_that_makes_check_disappear": {},
+        }
+
         # no check -> no checkmate, easy
         if not _player_has_check_in_position(
             check_for_current_player=True, board_state=self
         ):
             # no troubles
-            return []
+            return return_me
+
+        return_me["player_is_checked"] = True
 
         for piece in self.current_player_pieces:
             _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
@@ -389,24 +474,29 @@ class Board:
             # and no check after moving there will be present for current player
 
             for new_position, killed_opponent_piece in possible_moves.items():
-                # in this hypothetical new state
-                copied_board_state = copy.deepcopy(self)
 
-                # if move killes something, remove it from board
-                if killed_opponent_piece:
-                    copied_board_state.kill_piece(killed_opponent_piece)
-
-                # move piece to given new position
-                copied_board_state.positions_to_pieces[
-                    piece.position
-                ].position = new_position
+                new_state_if_this_move_is_done = (
+                    _get_copied_hypothetical_board_state_if_this_move_happens(
+                        current_board=self,
+                        piece=piece,
+                        new_position=new_position,
+                        killed_opponent_piece=killed_opponent_piece,
+                    )
+                )
 
                 if not _player_has_check_in_position(
                     check_for_current_player=True,
-                    board_state=copied_board_state,
+                    board_state=new_state_if_this_move_is_done,
                 ):
 
-                    return "check", f"1 way out of check: {piece} to {new_position}"
+                    return_me["move_that_makes_check_disappear"] = {
+                        "piece": piece,
+                        "new_position": new_position,
+                    }
+
+                    return return_me
 
         # player is checkmated if we went to this step
-        return "check", "checkmate"
+        return_me["player_is_checkmated"] = True
+
+        return return_me

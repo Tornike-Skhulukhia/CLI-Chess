@@ -1,3 +1,6 @@
+import copy
+
+
 def _is_chess_cell_coord(coord_str):
     """
     ex:
@@ -56,12 +59,7 @@ def _player_has_check_in_position(check_for_current_player, board_state):
         cells = piece.get_all_possible_cells_where_this_piece_can_kill(
             positions_to_pieces=board_state.positions_to_pieces,
         )
-        # print(piece, cells)
-        # if piece.piece_name == "queen":
-        #     print("==================")
-        #     print("==================")
-        #     print("==================")
-        #     breakpoint()
+
         cells_on_which_opponent_can_kill_piece.update(cells)
 
     has_check = king_position in cells_on_which_opponent_can_kill_piece
@@ -171,3 +169,66 @@ def get_linearly_distant_cells_from_piece_position(
         current_player_cells_that_are_defended_by_this_piece,
         possible_moves_to_killed_pieces,
     )
+
+
+def _get_copied_hypothetical_board_state_if_this_move_happens(
+    current_board, piece, new_position, killed_opponent_piece
+):
+    # in this hypothetical new state
+    copied_board_state = copy.deepcopy(current_board)
+
+    copied_piece = copied_board_state.positions_to_pieces[piece.position]
+
+    copied_killed_opponent_piece = (
+        copied_board_state.positions_to_pieces[killed_opponent_piece.position]
+        if killed_opponent_piece is not None
+        else None
+    )
+
+    copied_piece.make_a_move(
+        new_position=new_position,
+        killed_opponent_piece=copied_killed_opponent_piece,
+        board_state=copied_board_state,
+    )
+
+    return copied_board_state
+
+
+def convert_basic_move_notation_to_chess_notation(
+    basic_move_str, board_state_before_move
+):
+    """
+    Ex:
+        "G1 F3" --> "Nf3"
+    """
+    from_cell, to_cell = basic_move_str.upper().split()
+
+    # ex: N, Q, K, ""
+    moving_piece = board_state_before_move.positions_to_pieces[from_cell]
+    piece_name_prefix = moving_piece.chess_notation_prefix
+
+    # kill | x   # inacurate for an pasaunt
+    piece_being_killed = board_state_before_move.positions_to_pieces.get(to_cell)
+    kill_prefix = "x" if piece_being_killed else ""
+
+    # check | +
+    board_after_move = _get_copied_hypothetical_board_state_if_this_move_happens(
+        current_board=board_state_before_move,
+        piece=moving_piece,
+        new_position=to_cell,
+        killed_opponent_piece=piece_being_killed,
+    )
+    board_after_move._swap_player_turn()
+    check_suffix = (
+        "+"
+        if _player_has_check_in_position(
+            board_state=board_after_move, check_for_current_player=1
+        )
+        else ""
+    )
+
+    # if not clear where move starts, we also need these
+    from_col_letter_prefix = ""
+    from_row_num_prefix = ""
+
+    return f"{piece_name_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}"

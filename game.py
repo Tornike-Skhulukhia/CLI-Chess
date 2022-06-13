@@ -76,30 +76,32 @@ class Game:
             if not _move_is_valid:
                 continue
 
+            # reorganize move_a_piece_if_possible_and_add_validation_errors_if_necessary function
+            # later, so that it also returns errors and it is more clear what it does
             if self.board.move_a_piece_if_possible_and_add_validation_errors_if_necessary(
                 move_str
             ):
+
                 self.board._swap_player_turn()
 
                 # after our move, does opponent has check/checkmate?
-                if troubles := self.board.get_current_player_troubles():
-                    assert len(troubles) == 2
-                    assert troubles[0] == "check"
+                troubles = self.board.get_current_player_troubles()
 
-                    # player has at least active check
-                    _, message = troubles
-
-                    if message != "checkmate":
-                        # will show message like :
-                        # f"1 way out of check: {piece} to {new_position}"
-                        self.board._add_temporary_error(message)
-                        self.board._add_temporary_error("Check!")
-                    else:
+                if troubles["player_is_checked"]:
+                    if troubles["player_is_checkmated"]:
                         # game over, current player lose
                         self.board._add_temporary_error("You lost the game!")
+
                         self._game_status = "Finished"
+
                         self.board.draw(debug_mode=DEBUG_MODE)
+                    else:
+                        info = troubles["move_that_makes_check_disappear"]
+
+                        self.board._add_temporary_error(
+                            f'possible move out of check : {info["piece"]} to {info["new_position"]}'
+                        )
 
             time.sleep(0.1)
 
-        # game finished, allow to restart
+        # game finished, allow to restart ?
