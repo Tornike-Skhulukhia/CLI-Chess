@@ -63,8 +63,7 @@ class Board:
     def __repr__(self):
         return f"<Board object>"
 
-    @classmethod
-    def from_chess_notation_moves(cls, moves):
+    def apply_chess_notation_moves(self, moves_list):
         """
                Get list of moves written in chess notation like this:
 
@@ -100,7 +99,20 @@ class Board:
 
         apply these moves to our board and return the resulting board configuration object.
         """
-        return NotImplementedError
+        for moves in moves_list:
+            for move in moves:
+
+                basic_move = convert_chess_notation_to_basic_move_notation(move, self)
+                from_cell, to_cell = basic_move.split()
+                piece = self.positions_to_pieces[from_cell]
+
+                piece.make_a_move(
+                    new_position=to_cell,
+                    killed_opponent_piece=piece.get_possible_moves(self)[to_cell],
+                    board_state=self,
+                )
+
+                self._swap_player_turn()
 
     @property
     def current_player_pieces(self):
@@ -313,15 +325,9 @@ class Board:
             self._clear_screen()
 
         print(f"{self.errors_to_display=}")
-        print()
         print(f"{self.moves=}")
-        print()
         print(f"{self.chess_notation_moves=}")
         print()
-        # # print(f"{self.current_player_pieces=}")
-        # print()
-        # # print(f"{self.opponent_player_pieces=}")
-        # print()
 
         # later rewrite this function, so that we generate some data structure
         # that stores info about what to print and in what color and when,
@@ -383,7 +389,7 @@ class Board:
                     for piece in killed_pieces_to_draw:
                         print(
                             f"[{piece.color} on {self._black_cell_color}]{piece.piece_icon}[/]",
-                            end="",
+                            end=" ",
                         )
 
             # display errors if any
