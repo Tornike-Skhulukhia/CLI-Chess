@@ -156,7 +156,16 @@ class Piece(metaclass=abc.ABCMeta):
         valid_possible_moves = {}
 
         for new_position, killed_opponent_piece in possible_moves.items():
-            copied_board_state = copy.deepcopy(board_state)
+
+            copied_board_state = board_state.get_deepcopy()
+            copied_board_state.positions_to_pieces[
+                self.position
+            ].change_board_pieces_state_using_move(
+                new_position=new_position,
+                board_state=copied_board_state,
+                killed_opponent_piece=killed_opponent_piece,
+                swap_player_turn=False,
+            )
 
             if not _player_has_check_in_position(
                 check_for_current_player=True,
@@ -166,80 +175,27 @@ class Piece(metaclass=abc.ABCMeta):
 
         return valid_possible_moves
 
-    # def can_move_to(self, new_position, board_state):
-    #     """
-    #     Todo: also add error messages for invalid moves,
-    #     explaining why it is not possible - good for debugging/fixing and user/s
-    #     """
-    #     killed_opponent_piece = None
-    #     can_move_there = False
-
-    #     # todo: make sure if we have check and are moving cases work as expected...
-
-    #     # according to rules can piece move there ?
-    #     _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
-    #         board_state.positions_to_pieces
-    #     )
-
-    #     # filter out not on board moves
-    #     possible_moves = {
-    #         i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
-    #     }
-
-    #     print(f"possible_moves_before_checking_for_checks:{possible_moves}")
-
-    #     if new_position in possible_moves:
-    #         # copied_board_state = (
-    #         #     _get_copied_hypothetical_board_state_if_this_move_happens(
-    #         #         current_board=board_state,
-    #         #         piece=self,
-    #         #         new_position=new_position,
-    #         #         killed_opponent_piece=possible_moves[new_position],
-    #         #     )
-    #         # )
-
-    #         copied_board_state = copy.deepcopy(board_state)
-    #         copied_board_state.positions_to_pieces[self.position].make_a_move(new_position)
-
-
-    #         if not _player_has_check_in_position(
-    #             check_for_current_player=True,
-    #             board_state=copied_board_state,
-    #         ):
-    #             killed_opponent_piece = possible_moves[new_position]
-    #             can_move_there = True
-
-    #     return can_move_there, killed_opponent_piece
-
-    def make_a_move(
+    def change_board_pieces_state_using_move(
         self,
         new_position,
         board_state,
-        update_history=True,
+        killed_opponent_piece,
+        swap_player_turn=True,
     ):
-        # will error if no valid move is passed in this function
-        killed_opponent_piece = self.get_possible_moves(board_state)[new_position]
+        """
+        move current piece in given technically valid new location and kill any piece required
+        """
+        # # will error if no valid move is passed in this function
+        # killed_opponent_piece = self.get_possible_moves(board_state)[new_position]
 
         if killed_opponent_piece:
-            print(f"Killing {killed_opponent_piece}")
-            # we may also add and show score calculations like queen = 9 pawns, e.t.c
-            # who is behinde and how e.t.c
             board_state.kill_piece(killed_opponent_piece)
-
-        if update_history:
-            board_state.update_moves_history(
-                last_move_from=self.position, last_move_to=new_position
-            )
-
-        # breakpoint()
-        board_state._update_last_move_on_board_info(
-            _from=self.position, _to=new_position
-        )
 
         self.position = new_position
         self.increase_moves_count()
 
-        board_state._swap_player_turn()
+        if swap_player_turn:
+            board_state._swap_player_turn()
 
 
 class King(Piece):

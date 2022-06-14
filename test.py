@@ -36,7 +36,7 @@ moves = [
     ["Nd1", "Re8"],
     ["Rxe8+", "Nxe8"],
     ["Nxc3", "1-0"],
-][:1]
+][:5]
 
 game.board.apply_chess_notation_moves(moves)
 

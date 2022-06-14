@@ -8,20 +8,21 @@ Bugs
 """
 
 
+import copy
 import os
 
 from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
-from util import (
-    # _get_copied_hypothetical_board_state_if_this_move_happens,
-    # _is_chess_cell_coord,
+from util import (  # _get_copied_hypothetical_board_state_if_this_move_happens,; _is_chess_cell_coord,
     _player_has_check_in_position,
     convert_basic_move_notation_to_chess_notation,
     convert_chess_notation_to_basic_move_notation,
 )
 
-# from rich import Console
+
+NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
+INVALID_MOVE_ERROR_TEXT = "Invalid move"
 
 
 class Board:
@@ -98,6 +99,10 @@ class Board:
         ]
 
         apply these moves to our board and return the resulting board configuration object.
+
+        currently checks and other warnings/errors are not rendered at all, but validations are still in place,
+        so for example if last position after these moves causes check, player will not be able to play
+        something that does not stop king from checking, so just the errors are not visible(we may change that if needed)
         """
         for moves in moves_list:
             for move in moves:
@@ -107,11 +112,20 @@ class Board:
                 from_cell, to_cell = basic_move.split()
                 piece = self.positions_to_pieces[from_cell]
 
-                piece.make_a_move(
+                self.update_moves_history(
+                    last_move_from=from_cell, last_move_to=to_cell
+                )
+
+                piece.change_board_pieces_state_using_move(
                     new_position=to_cell,
-                    # killed_opponent_piece=piece.get_possible_moves(self)[to_cell],
+                    killed_opponent_piece=piece.get_possible_moves(board_state=self)[
+                        to_cell
+                    ],
                     board_state=self,
                 )
+
+    def get_deepcopy(self):
+        return copy.deepcopy(self)
 
     @property
     def current_player_pieces(self):
@@ -168,6 +182,7 @@ class Board:
         ! Make sure to run this function before changing state of board after specific valid move
         as it needs current playing state to make correct conversion of notations
         """
+        self._update_last_move_on_board_info(_from=last_move_from, _to=last_move_to)
 
         # first player adds new move item in histories
         if self.total_moves_count % 2 == 0:
@@ -188,15 +203,12 @@ class Board:
         self.chess_notation_moves[-1].append(chess_notation_move)
 
         # not actually needed, just for check
-        try:
-            assert (
-                convert_chess_notation_to_basic_move_notation(
-                    chess_notation=chess_notation_move, board_state_before_move=self
-                )
-                == basic_move_str
+        assert (
+            convert_chess_notation_to_basic_move_notation(
+                chess_notation=chess_notation_move, board_state_before_move=self
             )
-        except:
-            breakpoint()
+            == basic_move_str
+        )
 
         self.total_moves_count += 1
 
@@ -447,7 +459,9 @@ class Board:
 
         # do move checks
         if not _from in player_pieces_positions:
-            self._add_temporary_error(f"Sorry, there is no your piece on cell {_from}")
+            self._add_temporary_error(
+                NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT.format(_from)
+            )
             return False
 
         # if all previous checks are done
@@ -458,14 +472,23 @@ class Board:
         possible_moves = piece.get_possible_moves(board_state=self)
 
         if not _to in possible_moves:
-            self._add_temporary_error("Invalid move")
+            self._add_temporary_error(INVALID_MOVE_ERROR_TEXT)
             return False
 
         killed_opponent_piece = possible_moves[_to]
 
         print(f"{killed_opponent_piece=}")
 
-        piece.make_a_move(new_position=_to, board_state=self)
+        # run it before making actual changes as current notations translations implementation
+        # needs board state info before making actual move on board itself
+        # as conversions that happen, make decisions based on current board state, not after move
+        self.update_moves_history(last_move_from=_from, last_move_to=_to)
+
+        piece.change_board_pieces_state_using_move(
+            new_position=_to,
+            board_state=self,
+            killed_opponent_piece=killed_opponent_piece,
+        )
 
         return True
 
