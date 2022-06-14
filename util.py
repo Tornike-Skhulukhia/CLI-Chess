@@ -202,6 +202,8 @@ def convert_basic_move_notation_to_chess_notation(
     Ex:
         "G1 F3" --> "Nf3"
     """
+    assert _is_chess_move_str(basic_move_str)
+
     from_cell, to_cell = basic_move_str.upper().split()
 
     # ex: N, Q, K, ""
@@ -272,3 +274,79 @@ def convert_basic_move_notation_to_chess_notation(
             clarification_prefix = clarification_prefix.lower()
 
     return f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}"
+
+
+def convert_chess_notation_to_basic_move_notation(
+    chess_notation, board_state_before_move
+):
+    """
+    Ex:
+        "Nf3" --> "G1 F3"
+    """
+    # kills and checks signs do not change move at all
+    chess_notation = chess_notation.replace("+", "").replace("x", "")
+    move_to = chess_notation[-2:].upper()
+    move_from_str = chess_notation[:-2]
+
+    # what piece is moving?
+    if move_from_str and move_from_str[0] in "RNBQK":
+        # for pieces other than pawn
+        piece_letter = move_from_str[0]
+        move_from_str = move_from_str[1:]
+    else:
+        # for pawns
+        piece_letter = ""
+
+    # pieces of given type
+    possible_move_initializer_pieces = (
+        board_state_before_move.get_current_player_pieces_with_piece_prefix(
+            piece_letter
+        )
+    )
+
+    # leave ones that can move there
+    pieces_that_can_move_there = [
+        i
+        for i in possible_move_initializer_pieces
+        if move_to in i.get_possible_moves(board_state_before_move)
+    ]
+
+    if len(pieces_that_can_move_there) == 1:
+        assert move_from_str == ""
+
+        move_from = pieces_that_can_move_there[0].position
+    else:
+        # if more than 1 piece can move there,
+        # we will have row, column or column&row prefixes to identify exact piece
+        try:
+            assert 1 <= len(move_from_str) <= 2
+        except:
+            breakpoint()
+
+        # get row and column for all possibilities
+        row, col = "", ""
+        for i in move_from_str:
+            if i.isdigit():
+                assert i in "12345678"
+                row = i
+            else:
+                assert i in "abcdefgh"
+                col = i.upper()
+
+        # we have column and row given - easy
+        if row and col:
+            move_from = board_state_before_move.positions_to_pieces[
+                f"{col}{row}"
+            ].position
+        else:
+            # we have only row
+            if row:
+                pieces = [i for i in pieces_that_can_move_there if i.position[1] == row]
+            # we have only column
+            else:
+                pieces = [i for i in pieces_that_can_move_there if i.position[0] == col]
+
+            assert len(pieces) == 1
+            move_from = pieces[0].position
+
+    return f"{move_from} {move_to}"

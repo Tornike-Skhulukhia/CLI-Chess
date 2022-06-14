@@ -15,7 +15,10 @@ class Game:
     Class to handle game initialization,
     retreival and validation of arguments and moves.
     board redrawing after making moves,
-    final screens and retries/scores(if needed)
+    final screens and retries/scores(if needed).
+
+    to see all available colors to use for cells and/or pieces visit: 
+        https://rich.readthedocs.io/en/stable/appendix/colors.html
     """
 
     def __init__(
@@ -101,6 +104,9 @@ class Game:
                         self.board._add_temporary_error(
                             f'possible move out of check : {info["piece"]} to {info["new_position"]}'
                         )
+
+                        # add it after previous message as draw function gets info from end first
+                        self.board._add_temporary_error("Check!")
 
             time.sleep(0.1)
 

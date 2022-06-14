@@ -1,7 +1,7 @@
 from game import Game
 
 g = Game(
-    # p1_color="red3",
+    # p1_color="dark_red",
     # p2_color="green1",
     # black_cell_color="dark_blue",
     # white_cell_color="orange",

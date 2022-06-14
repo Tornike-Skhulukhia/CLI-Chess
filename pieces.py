@@ -230,8 +230,8 @@ class Piece(metaclass=abc.ABCMeta):
 
             board_state.kill_piece(killed_opponent_piece)
 
-            print(f"{len(board_state.player_1_pieces)=}")
-            print(f"{len(board_state.player_2_pieces)=}")
+            # print(f"{len(board_state.player_1_pieces)=}")
+            # print(f"{len(board_state.player_2_pieces)=}")
 
 
 class King(Piece):

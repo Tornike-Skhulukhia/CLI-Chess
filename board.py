@@ -14,10 +14,11 @@ from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
 from util import (
+    _get_copied_hypothetical_board_state_if_this_move_happens,
     _is_chess_cell_coord,
     _player_has_check_in_position,
     convert_basic_move_notation_to_chess_notation,
-    _get_copied_hypothetical_board_state_if_this_move_happens,
+    convert_chess_notation_to_basic_move_notation,
 )
 
 # from rich import Console
@@ -117,6 +118,21 @@ class Board:
     def opponent_player_king(self):
         return [i for i in self.opponent_player_pieces if i.piece_name == "king"][0]
 
+    def get_current_player_pieces_with_piece_prefix(self, chess_notation):
+        """
+        "" --> all Pawns
+        K - king
+        N - nights
+        B - bishops
+
+        e.t.c
+        """
+        return [
+            i
+            for i in self.current_player_pieces
+            if i.chess_notation_prefix == chess_notation
+        ]
+
     def _swap_player_turn(self):
         if self._player_turn == 1:
             self._player_turn = 2
@@ -148,16 +164,27 @@ class Board:
 
         ### update last move item
         # for basic moves history
-        basic_move_str = f"{last_move_from.lower()} {last_move_to.lower()}"
+        basic_move_str = f"{last_move_from} {last_move_to}"
         self.moves[-1].append(basic_move_str)
 
         # for chess notation history
         chess_notation_move = convert_basic_move_notation_to_chess_notation(
-            basic_move_str=basic_move_str,
+            basic_move_str=basic_move_str.lower(),
             board_state_before_move=self,
         )
 
         self.chess_notation_moves[-1].append(chess_notation_move)
+
+        # not actually needed, just for check
+        try:
+            assert (
+                convert_chess_notation_to_basic_move_notation(
+                    chess_notation=chess_notation_move, board_state_before_move=self
+                )
+                == basic_move_str
+            )
+        except:
+            breakpoint()
 
         self.total_moves_count += 1
 
@@ -461,40 +488,49 @@ class Board:
         return_me["player_is_checked"] = True
 
         for piece in self.current_player_pieces:
-            _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
-                self.positions_to_pieces
-            )
+            possible_moves = piece.get_possible_moves(board_state=self)
 
-            # filter out not on board moves
-            possible_moves = {
-                i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
-            }
+            if len(possible_moves) > 0:
+                return_me["move_that_makes_check_disappear"] = {
+                    "piece": piece,
+                    "new_position": list(possible_moves.keys())[0],
+                }
+                return return_me
 
-            # leave moves after which no checks are against current player
-            # and no check after moving there will be present for current player
+            # _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
+            #     self.positions_to_pieces
+            # )
 
-            for new_position, killed_opponent_piece in possible_moves.items():
+            # # filter out not on board moves
+            # possible_moves = {
+            #     i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
+            # }
 
-                new_state_if_this_move_is_done = (
-                    _get_copied_hypothetical_board_state_if_this_move_happens(
-                        current_board=self,
-                        piece=piece,
-                        new_position=new_position,
-                        killed_opponent_piece=killed_opponent_piece,
-                    )
-                )
+            # # leave moves after which no checks are against current player
+            # # and no check after moving there will be present for current player
 
-                if not _player_has_check_in_position(
-                    check_for_current_player=True,
-                    board_state=new_state_if_this_move_is_done,
-                ):
+            # for new_position, killed_opponent_piece in possible_moves.items():
 
-                    return_me["move_that_makes_check_disappear"] = {
-                        "piece": piece,
-                        "new_position": new_position,
-                    }
+            #     new_state_if_this_move_is_done = (
+            #         _get_copied_hypothetical_board_state_if_this_move_happens(
+            #             current_board=self,
+            #             piece=piece,
+            #             new_position=new_position,
+            #             killed_opponent_piece=killed_opponent_piece,
+            #         )
+            #     )
 
-                    return return_me
+            #     if not _player_has_check_in_position(
+            #         check_for_current_player=True,
+            #         board_state=new_state_if_this_move_is_done,
+            #     ):
+
+            #         return_me["move_that_makes_check_disappear"] = {
+            #             "piece": piece,
+            #             "new_position": new_position,
+            #         }
+
+            #         return return_me
 
         # player is checkmated if we went to this step
         return_me["player_is_checkmated"] = True

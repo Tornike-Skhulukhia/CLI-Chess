@@ -13,3 +13,4 @@
 # todo after basic functionalities
 . add good docs for each functions about their input/output and functionalities/roles
 . ability to play using 2 different computers on same network using IP sharing
+. add checks that chess notation does really seem chess notation when getting it?
