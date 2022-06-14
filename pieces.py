@@ -12,6 +12,7 @@ from util import (
     _top_left_coords,
     _top_right_coords,
     get_linearly_distant_cells_from_piece_position,
+    _get_copied_hypothetical_board_state_if_this_move_happens,
 )
 
 
@@ -111,13 +112,17 @@ class Piece(metaclass=abc.ABCMeta):
 
         return result
 
-    # @abc.abstractmethod
-    def get_all_possible_moves_and_killed_pieces_if_moved(
-        self,
-        positions_to_pieces,
-        return_defended_cells=False,
-    ):
-        raise NotImplementedError
+    def get_all_pieces_of_this_type(self, board_state):
+        all_pieces = []
+
+        for piece in board_state.positions_to_pieces.values():
+            if (
+                self.player_number == piece.player_number
+                and self.piece_name == piece.piece_name
+            ):
+                all_pieces.append(piece)
+
+        return all_pieces
 
     def get_all_possible_cells_where_this_piece_can_kill(self, positions_to_pieces):
         (
@@ -138,6 +143,35 @@ class Piece(metaclass=abc.ABCMeta):
         defended_cells = [i for i in defended_cells if _is_chess_cell_coord(i)]
 
         return defended_cells
+
+    def get_possible_moves(self, board_state):
+        _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
+            board_state.positions_to_pieces
+        )
+
+        possible_moves = {
+            i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
+        }
+
+        valid_possible_moves = {}
+
+        for new_position, killed_opponent_piece in possible_moves.items():
+            copied_board_state = (
+                _get_copied_hypothetical_board_state_if_this_move_happens(
+                    current_board=board_state,
+                    piece=self,
+                    new_position=new_position,
+                    killed_opponent_piece=killed_opponent_piece,
+                )
+            )
+
+            if not _player_has_check_in_position(
+                check_for_current_player=True,
+                board_state=copied_board_state,
+            ):
+                valid_possible_moves[new_position] = killed_opponent_piece
+
+        return valid_possible_moves
 
     def can_move_to(self, new_position, board_state):
         """
@@ -162,24 +196,14 @@ class Piece(metaclass=abc.ABCMeta):
         print(f"possible_moves_before_checking_for_checks:{possible_moves}")
 
         if new_position in possible_moves:
-            # and no check after moving there will be present for current player
-            copied_board_state = copy.deepcopy(board_state)
-
-            if possible_moves[new_position]:
-                # piece in main board state pieces
-                killed_piece = possible_moves[new_position]
-
-                # piece in copied board state | for pawn killing, En_passant - killed piece position
-                # may be different than where new piece comes after killing, so
-                killed_piece_in_copied_universe = (
-                    copied_board_state.positions_to_pieces[killed_piece.position]
+            copied_board_state = (
+                _get_copied_hypothetical_board_state_if_this_move_happens(
+                    current_board=board_state,
+                    piece=self,
+                    new_position=new_position,
+                    killed_opponent_piece=possible_moves[new_position],
                 )
-
-                copied_board_state.kill_piece(killed_piece_in_copied_universe)
-
-            copied_board_state.positions_to_pieces[
-                self.position
-            ].position = new_position
+            )
 
             if not _player_has_check_in_position(
                 check_for_current_player=True,

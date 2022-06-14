@@ -1,4 +1,5 @@
 import copy
+from collections import Counter
 
 
 def _is_chess_cell_coord(coord_str):
@@ -205,10 +206,16 @@ def convert_basic_move_notation_to_chess_notation(
 
     # ex: N, Q, K, ""
     moving_piece = board_state_before_move.positions_to_pieces[from_cell]
+    moving_piece_col, moving_piece_row = moving_piece.position
     piece_name_prefix = moving_piece.chess_notation_prefix
 
     # kill | x   # inacurate for an pasaunt
-    piece_being_killed = board_state_before_move.positions_to_pieces.get(to_cell)
+    # piece_being_killed = board_state_before_move.positions_to_pieces.get(to_cell)
+    # vs approach N2
+    # is it 100% correct? test
+    piece_being_killed = moving_piece.get_possible_moves(board_state_before_move)[
+        to_cell
+    ]
     kill_prefix = "x" if piece_being_killed else ""
 
     # check | +
@@ -227,8 +234,41 @@ def convert_basic_move_notation_to_chess_notation(
         else ""
     )
 
-    # if not clear where move starts, we also need these
-    from_col_letter_prefix = ""
-    from_row_num_prefix = ""
+    ### if there are more than 1 same type of pieces
+    ### that can move to new position
+    all_pieces_of_this_type = moving_piece.get_all_pieces_of_this_type(
+        board_state_before_move
+    )
+    clarification_prefix = ""
 
-    return f"{piece_name_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}"
+    if len(all_pieces_of_this_type) > 1:
+        possible_moves_info = {
+            piece: piece.get_possible_moves(board_state_before_move)
+            for piece in all_pieces_of_this_type
+        }
+
+        pieces_that_can_move_to_new_position = [
+            piece for piece, moves in possible_moves_info.items() if to_cell in moves
+        ]
+
+        if len(pieces_that_can_move_to_new_position) > 1:
+            cols, rows = [], []
+
+            for piece in pieces_that_can_move_to_new_position:
+                cols.append(piece.position[0])
+                rows.append(piece.position[1])
+
+            # is adding column letter enough to make clear which one moved?
+            # yes, if on given column only one such piece exists
+            if cols.count(moving_piece_col) == 1:
+                clarification_prefix = moving_piece_col
+
+            # yes, if on given column only one such piece exists
+            elif rows.count(moving_piece_row) == 1:
+                clarification_prefix = moving_piece_row
+            else:
+                clarification_prefix = moving_piece.position
+
+            clarification_prefix = clarification_prefix.lower()
+
+    return f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}"
