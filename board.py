@@ -14,8 +14,8 @@ from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
 from util import (
-    _get_copied_hypothetical_board_state_if_this_move_happens,
-    _is_chess_cell_coord,
+    # _get_copied_hypothetical_board_state_if_this_move_happens,
+    # _is_chess_cell_coord,
     _player_has_check_in_position,
     convert_basic_move_notation_to_chess_notation,
     convert_chess_notation_to_basic_move_notation,
@@ -103,16 +103,15 @@ class Board:
             for move in moves:
 
                 basic_move = convert_chess_notation_to_basic_move_notation(move, self)
+
                 from_cell, to_cell = basic_move.split()
                 piece = self.positions_to_pieces[from_cell]
 
                 piece.make_a_move(
                     new_position=to_cell,
-                    killed_opponent_piece=piece.get_possible_moves(self)[to_cell],
+                    # killed_opponent_piece=piece.get_possible_moves(self)[to_cell],
                     board_state=self,
                 )
-
-                self._swap_player_turn()
 
     @property
     def current_player_pieces(self):
@@ -169,6 +168,7 @@ class Board:
         ! Make sure to run this function before changing state of board after specific valid move
         as it needs current playing state to make correct conversion of notations
         """
+
         # first player adds new move item in histories
         if self.total_moves_count % 2 == 0:
             self.moves.append([])
@@ -284,7 +284,7 @@ class Board:
 
         return cell_color
 
-    def _update_last_move_on_board_info(self, _to, _from):
+    def _update_last_move_on_board_info(self, _from, _to):
         self._to_cell = _to
         self._from_cell = _from
 
@@ -455,25 +455,17 @@ class Board:
         piece = self.positions_to_pieces[_from]
 
         # can that piece make that move ?
-        move_is_valid, killed_opponent_piece = piece.can_move_to(
-            new_position=_to, board_state=self
-        )
+        possible_moves = piece.get_possible_moves(board_state=self)
 
-        print(f"{move_is_valid=}, {killed_opponent_piece=}")
-
-        if not move_is_valid:
+        if not _to in possible_moves:
             self._add_temporary_error("Invalid move")
             return False
 
-        self.update_moves_history(last_move_from=_from, last_move_to=_to)
+        killed_opponent_piece = possible_moves[_to]
 
-        piece.make_a_move(
-            new_position=_to,
-            killed_opponent_piece=killed_opponent_piece,
-            board_state=self,
-        )
+        print(f"{killed_opponent_piece=}")
 
-        self._update_last_move_on_board_info(_to=_to, _from=_from)
+        piece.make_a_move(new_position=_to, board_state=self)
 
         return True
 
@@ -502,41 +494,6 @@ class Board:
                     "new_position": list(possible_moves.keys())[0],
                 }
                 return return_me
-
-            # _possible_moves = piece.get_all_possible_moves_and_killed_pieces_if_moved(
-            #     self.positions_to_pieces
-            # )
-
-            # # filter out not on board moves
-            # possible_moves = {
-            #     i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
-            # }
-
-            # # leave moves after which no checks are against current player
-            # # and no check after moving there will be present for current player
-
-            # for new_position, killed_opponent_piece in possible_moves.items():
-
-            #     new_state_if_this_move_is_done = (
-            #         _get_copied_hypothetical_board_state_if_this_move_happens(
-            #             current_board=self,
-            #             piece=piece,
-            #             new_position=new_position,
-            #             killed_opponent_piece=killed_opponent_piece,
-            #         )
-            #     )
-
-            #     if not _player_has_check_in_position(
-            #         check_for_current_player=True,
-            #         board_state=new_state_if_this_move_is_done,
-            #     ):
-
-            #         return_me["move_that_makes_check_disappear"] = {
-            #             "piece": piece,
-            #             "new_position": new_position,
-            #         }
-
-            #         return return_me
 
         # player is checkmated if we went to this step
         return_me["player_is_checkmated"] = True

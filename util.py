@@ -172,27 +172,27 @@ def get_linearly_distant_cells_from_piece_position(
     )
 
 
-def _get_copied_hypothetical_board_state_if_this_move_happens(
-    current_board, piece, new_position, killed_opponent_piece
-):
-    # in this hypothetical new state
-    copied_board_state = copy.deepcopy(current_board)
+# def _get_copied_hypothetical_board_state_if_this_move_happens(
+#     current_board, piece, new_position, killed_opponent_piece
+# ):
+#     # in this hypothetical new state
+#     copied_board_state = copy.deepcopy(current_board)
 
-    copied_piece = copied_board_state.positions_to_pieces[piece.position]
+#     copied_piece = copied_board_state.positions_to_pieces[piece.position]
 
-    copied_killed_opponent_piece = (
-        copied_board_state.positions_to_pieces[killed_opponent_piece.position]
-        if killed_opponent_piece is not None
-        else None
-    )
+#     # copied_killed_opponent_piece = (
+#     #     copied_board_state.positions_to_pieces[killed_opponent_piece.position]
+#     #     if killed_opponent_piece is not None
+#     #     else None
+#     # )
 
-    copied_piece.make_a_move(
-        new_position=new_position,
-        killed_opponent_piece=copied_killed_opponent_piece,
-        board_state=copied_board_state,
-    )
+#     copied_piece.make_a_move(
+#         new_position=new_position,
+#         # killed_opponent_piece=copied_killed_opponent_piece,
+#         board_state=copied_board_state,
+#     )
 
-    return copied_board_state
+#     return copied_board_state
 
 
 def convert_basic_move_notation_to_chess_notation(
@@ -221,13 +221,19 @@ def convert_basic_move_notation_to_chess_notation(
     kill_prefix = "x" if piece_being_killed else ""
 
     # check | +
-    board_after_move = _get_copied_hypothetical_board_state_if_this_move_happens(
-        current_board=board_state_before_move,
-        piece=moving_piece,
-        new_position=to_cell,
-        killed_opponent_piece=piece_being_killed,
+    board_after_move = copy.deepcopy(board_state_before_move)
+    board_after_move.positions_to_pieces[moving_piece.position].make_a_move(
+        to_cell, board_after_move, update_history=False
     )
-    board_after_move._swap_player_turn()
+
+    # board_after_move = _get_copied_hypothetical_board_state_if_this_move_happens(
+    #     current_board=board_state_before_move,
+    #     piece=moving_piece,
+    #     new_position=to_cell,
+    #     killed_opponent_piece=piece_being_killed,
+    # )
+    # board_after_move._swap_player_turn()
+
     check_suffix = (
         "+"
         if _player_has_check_in_position(

@@ -17,7 +17,7 @@ class Game:
     board redrawing after making moves,
     final screens and retries/scores(if needed).
 
-    to see all available colors to use for cells and/or pieces visit: 
+    to see all available colors to use for cells and/or pieces visit:
         https://rich.readthedocs.io/en/stable/appendix/colors.html
     """
 
@@ -84,9 +84,6 @@ class Game:
             if self.board.move_a_piece_if_possible_and_add_validation_errors_if_necessary(
                 move_str
             ):
-
-                self.board._swap_player_turn()
-
                 # after our move, does opponent has check/checkmate?
                 troubles = self.board.get_current_player_troubles()
 
