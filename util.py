@@ -175,6 +175,11 @@ def get_linearly_distant_cells_from_piece_position(
 def convert_basic_move_notation_to_chess_notation(
     basic_move_str, board_state_before_move
 ):
+    '''
+    Make small research, and if it is necessary for pawn killing other pieces to 
+    write starting column even when can be uniquely identified without it, also modify logic
+    here a bit to be consistent. Decoding from chess notation works without this change.
+    '''
     """
     Ex:
         "G1 F3" --> "Nf3"
@@ -183,13 +188,10 @@ def convert_basic_move_notation_to_chess_notation(
 
     from_cell, to_cell = basic_move_str.upper().split()
 
-    try:
-        # ex: N, Q, K, ""
-        moving_piece = board_state_before_move.positions_to_pieces[from_cell]
-        moving_piece_col, moving_piece_row = moving_piece.position
-        piece_name_prefix = moving_piece.chess_notation_prefix
-    except:
-        breakpoint()
+    # ex: N, Q, K, ""
+    moving_piece = board_state_before_move.positions_to_pieces[from_cell]
+    moving_piece_col, moving_piece_row = moving_piece.position
+    piece_name_prefix = moving_piece.chess_notation_prefix
 
     # kill | x   # inacurate for an pasaunt
     # piece_being_killed = board_state_before_move.positions_to_pieces.get(to_cell)
@@ -202,15 +204,19 @@ def convert_basic_move_notation_to_chess_notation(
 
     # check | +
     board_after_move = board_state_before_move.get_deepcopy()
-    board_after_move.positions_to_pieces[
-        moving_piece.position
-    ].change_board_pieces_state_using_move(
-        new_position=to_cell,
-        board_state=board_after_move,
-        killed_opponent_piece=piece_being_killed,
+    copied_piece = board_after_move.positions_to_pieces[moving_piece.position]
+    # copied_piece_being_killed =
+    copied_piece_being_killed = (
+        board_after_move.positions_to_pieces[piece_being_killed.position]
+        if piece_being_killed
+        else piece_being_killed
     )
 
-
+    copied_piece.change_board_pieces_state_using_move(
+        new_position=to_cell,
+        board_state=board_after_move,
+        killed_opponent_piece=copied_piece_being_killed,
+    )
 
     check_suffix = (
         "+"
@@ -281,6 +287,7 @@ def convert_chess_notation_to_basic_move_notation(
         # for pawns
         piece_letter = ""
 
+
     # pieces of given type
     possible_move_initializer_pieces = (
         board_state_before_move.get_current_player_pieces_with_piece_prefix(
@@ -294,18 +301,15 @@ def convert_chess_notation_to_basic_move_notation(
         for i in possible_move_initializer_pieces
         if move_to in i.get_possible_moves(board_state_before_move)
     ]
-
+    
     if len(pieces_that_can_move_there) == 1:
-        assert move_from_str == ""
+        # for pawn we may have unnecessary more info here
 
         move_from = pieces_that_can_move_there[0].position
     else:
         # if more than 1 piece can move there,
         # we will have row, column or column&row prefixes to identify exact piece
-        try:
-            assert 1 <= len(move_from_str) <= 2
-        except:
-            breakpoint()
+        assert 1 <= len(move_from_str) <= 2
 
         # get row and column for all possibilities
         row, col = "", ""

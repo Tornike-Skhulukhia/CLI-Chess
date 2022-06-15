@@ -157,13 +157,20 @@ class Piece(metaclass=abc.ABCMeta):
 
         for new_position, killed_opponent_piece in possible_moves.items():
 
+
+
             copied_board_state = board_state.get_deepcopy()
-            copied_board_state.positions_to_pieces[
-                self.position
-            ].change_board_pieces_state_using_move(
+            copied_piece = copied_board_state.positions_to_pieces[self.position]
+            copied_killed_opponent_piece = (
+                copied_board_state.positions_to_pieces[killed_opponent_piece.position]
+                if killed_opponent_piece
+                else killed_opponent_piece
+            )
+
+            copied_piece.change_board_pieces_state_using_move(
                 new_position=new_position,
                 board_state=copied_board_state,
-                killed_opponent_piece=killed_opponent_piece,
+                killed_opponent_piece=copied_killed_opponent_piece,
                 swap_player_turn=False,
             )
 
@@ -185,9 +192,6 @@ class Piece(metaclass=abc.ABCMeta):
         """
         move current piece in given technically valid new location and kill any piece required
         """
-        # # will error if no valid move is passed in this function
-        # killed_opponent_piece = self.get_possible_moves(board_state)[new_position]
-
         if killed_opponent_piece:
             board_state.kill_piece(killed_opponent_piece)
 

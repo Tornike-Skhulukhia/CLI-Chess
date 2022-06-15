@@ -62,6 +62,8 @@ class Board:
         self._initialize_pieces()
 
     def __repr__(self):
+        self.draw(debug_mode=1)
+
         return f"<Board object>"
 
     def apply_chess_notation_moves(self, moves_list):
@@ -107,10 +109,14 @@ class Board:
         for moves in moves_list:
             for move in moves:
 
+
+
                 basic_move = convert_chess_notation_to_basic_move_notation(move, self)
 
                 from_cell, to_cell = basic_move.split()
                 piece = self.positions_to_pieces[from_cell]
+
+                print(f"Checking chess notation move {move} --> {basic_move}")
 
                 self.update_moves_history(
                     last_move_from=from_cell, last_move_to=to_cell
@@ -266,6 +272,9 @@ class Board:
         print("Pieces Ready!!!")
 
     def _remove_piece_from_pieces(self, piece_to_kill):
+        if piece_to_kill:
+            assert piece_to_kill in [*self.player_2_pieces, *self.player_1_pieces]
+
         if piece_to_kill.player_number == 2:
             self.player_2_pieces = [
                 i for i in self.player_2_pieces if i is not piece_to_kill
@@ -389,9 +398,6 @@ class Board:
                     if row_index == 0
                     else self.killed_opponent_pieces[1]
                 )
-
-                # if row_index == 7 and killed_pieces_to_draw:
-                #     breakpoint()
 
                 if killed_pieces_to_draw:
                     # left padding
