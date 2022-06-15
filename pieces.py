@@ -1,5 +1,4 @@
 import abc
-import copy
 from _move_related_functions import (
     _bottom_coords,
     _bottom_left_coords,
@@ -15,6 +14,10 @@ from _move_related_functions import (
 
 
 class Piece(metaclass=abc.ABCMeta):
+    """
+    Chess piece superclass for subclasses like Pawn, Queen, King e.t.c
+    """
+
     def __init__(self, color, name, piece_icon, position, player_number):
         self.color = color
         self.name = name

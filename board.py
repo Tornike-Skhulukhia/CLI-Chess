@@ -32,29 +32,39 @@ class Board:
         white_cell_color,
         previous_move_cell_color,
     ):
+        # colors to draw player pieces
         self.p1_color = p1_color
         self.p2_color = p2_color
 
+        # colors to draw cells on board
         self._black_cell_color = black_cell_color
         self._white_cell_color = white_cell_color
 
-        # also needed
+        # what color to use to draw last move cells
+        self._previous_move_cell_color = previous_move_cell_color
+
+        # holds each player piece
         self.player_1_pieces = []
         self.player_2_pieces = []
-        # self.positions_to_pieces = {}
+
+        # holds who killed what info
         self.killed_opponent_pieces = {1: [], 2: []}
 
+        # last move started at and ended at points
         self._from_cell = None
         self._to_cell = None
 
-        self._previous_move_cell_color = previous_move_cell_color
-
+        # holds different errors that until
+        # they show up when calling board's draw method
         self.errors_to_display = []
 
+        # who should play now(1 or 2)
         self._player_turn = 1
 
         self.total_moves_count = 0
+        # stores moves with just starting and ending cells, like [ ["E2 E4", "G8 F6"], ]
         self.moves = []
+        # stores moves with chess notation like [ ["e4", "Nf6"], ]
         self.chess_notation_moves = []
 
         self._initialize_pieces()
@@ -144,6 +154,25 @@ class Board:
     @property
     def opponent_player_king(self):
         return [i for i in self.opponent_player_pieces if i.piece_name == "king"][0]
+
+    @property
+    def index_based_positions_to_pieces(self):
+        index_based_positions_to_pieces = {
+            i.index_based_position: i
+            for i in [*self.player_1_pieces, *self.player_2_pieces]
+        }
+
+        return index_based_positions_to_pieces
+
+    @property
+    def positions_to_pieces(self):
+        positions_to_pieces = {}
+
+        # assign each chess position string to corresponding piece
+        for piece in [*self.player_1_pieces, *self.player_2_pieces]:
+            positions_to_pieces[piece.position] = piece
+
+        return positions_to_pieces
 
     def get_current_player_pieces_with_piece_prefix(self, chess_notation):
         """
@@ -324,31 +353,6 @@ class Board:
         has_check = king_position in cells_on_which_opponent_can_kill_piece
 
         return has_check
-
-    @property
-    def index_based_positions_to_pieces(self):
-        index_based_positions_to_pieces = {
-            i.index_based_position: i
-            for i in [*self.player_1_pieces, *self.player_2_pieces]
-        }
-
-        return index_based_positions_to_pieces
-
-    @property
-    def positions_to_pieces(self):
-        positions_to_pieces = {}
-
-        # assign each chess position string to corresponding piece
-        for piece in [*self.player_1_pieces, *self.player_2_pieces]:
-            positions_to_pieces[piece.position] = piece
-
-        return positions_to_pieces
-
-    @property
-    def all_piece_positions(self):
-        all_piece_positions = list(self.positions_to_pieces.keys())
-
-        return all_piece_positions
 
     @staticmethod
     def _clear_screen():
