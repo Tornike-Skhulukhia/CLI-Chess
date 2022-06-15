@@ -1,18 +1,16 @@
 import abc
 import copy
-from util import (
+from _move_related_functions import (
     _bottom_coords,
     _bottom_left_coords,
     _bottom_right_coords,
-    _player_has_check_in_position,
     _is_chess_cell_coord,
     _left_coords,
     _right_coords,
     _top_coords,
     _top_left_coords,
     _top_right_coords,
-    get_linearly_distant_cells_from_piece_position,
-    # _get_copied_hypothetical_board_state_if_this_move_happens,
+    _get_linearly_distant_cells_from_piece_position,
 )
 
 
@@ -157,8 +155,6 @@ class Piece(metaclass=abc.ABCMeta):
 
         for new_position, killed_opponent_piece in possible_moves.items():
 
-
-
             copied_board_state = board_state.get_deepcopy()
             copied_piece = copied_board_state.positions_to_pieces[self.position]
             copied_killed_opponent_piece = (
@@ -174,10 +170,7 @@ class Piece(metaclass=abc.ABCMeta):
                 swap_player_turn=False,
             )
 
-            if not _player_has_check_in_position(
-                check_for_current_player=True,
-                board_state=copied_board_state,
-            ):
+            if not copied_board_state._player_has_check_in_position():
                 valid_possible_moves[new_position] = killed_opponent_piece
 
         return valid_possible_moves
@@ -269,7 +262,7 @@ class Queen(Piece):
         return_defended_cells=False,
     ):
 
-        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+        defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
             positions_to_pieces=positions_to_pieces,
             linearity_functions=[
@@ -308,7 +301,7 @@ class Rook(Piece):
         return_defended_cells=False,
     ):
 
-        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+        defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
             positions_to_pieces=positions_to_pieces,
             linearity_functions=[
@@ -341,7 +334,7 @@ class Bishop(Piece):
         return_defended_cells=False,
     ):
 
-        defended_cells, info = get_linearly_distant_cells_from_piece_position(
+        defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
             positions_to_pieces=positions_to_pieces,
             linearity_functions=[

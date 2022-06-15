@@ -1,5 +1,6 @@
 from game import Game
 
+
 game = Game(
     # p1_color="dark_red",
     # p2_color="green1",
@@ -11,13 +12,19 @@ game = Game(
 # get specific starting position from chess notation moves of some game
 #########################################################################
 moves = [
-    ["d4", "Nf6"],   # 1
-    ["c4", "e6"],   # 2
-    ["Nf3", "b6"],   # 3
-    ["g3", "Bb7"],   # 4
-    ["Bg2", "Bb4+"],   # 5 
-    ["Bd2", "c5"],   # 6
-    ["Bxb4", "cxb4"],   # 7
+#     #############
+#     ["e4", "d5"],
+#     ["exd5"],
+
+#     #############
+
+    ["d4", "Nf6"],  # 1
+    ["c4", "e6"],  # 2
+    ["Nf3", "b6"],  # 3
+    ["g3", "Bb7"],  # 4
+    ["Bg2", "Bb4+"],  # 5
+    ["Bd2", "c5"],  # 6
+    ["Bxb4", "cxb4"],  # 7
     # ["O-O", "O-O"],   # 8
     # ["Nbd2", "a5"],   # 9
     # ["Re1", "d6"],

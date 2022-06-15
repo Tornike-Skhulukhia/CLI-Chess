@@ -14,12 +14,10 @@ import os
 from rich import print
 
 from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
-from util import (  # _get_copied_hypothetical_board_state_if_this_move_happens,; _is_chess_cell_coord,
-    _player_has_check_in_position,
+from _notation_converters import (
     convert_basic_move_notation_to_chess_notation,
     convert_chess_notation_to_basic_move_notation,
 )
-
 
 NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
 INVALID_MOVE_ERROR_TEXT = "Invalid move"
@@ -109,14 +107,12 @@ class Board:
         for moves in moves_list:
             for move in moves:
 
-
-
                 basic_move = convert_chess_notation_to_basic_move_notation(move, self)
 
                 from_cell, to_cell = basic_move.split()
                 piece = self.positions_to_pieces[from_cell]
 
-                print(f"Checking chess notation move {move} --> {basic_move}")
+                # print(f"Checking chess notation move {move} --> {basic_move}")
 
                 self.update_moves_history(
                     last_move_from=from_cell, last_move_to=to_cell
@@ -308,6 +304,26 @@ class Board:
     def _update_last_move_on_board_info(self, _from, _to):
         self._to_cell = _to
         self._from_cell = _from
+
+    def _player_has_check_in_position(self):
+        # check if current player has check
+        king_position = self.current_player_king.position
+        opponent_pieces = self.opponent_player_pieces
+
+        # get all possible killing moves that opponent pieces can make
+        # for pawns, we care only about killing cells here, as they can't push King forward :-)
+        cells_on_which_opponent_can_kill_piece = set()
+
+        for piece in opponent_pieces:
+            cells = piece.get_all_possible_cells_where_this_piece_can_kill(
+                positions_to_pieces=self.positions_to_pieces,
+            )
+
+            cells_on_which_opponent_can_kill_piece.update(cells)
+
+        has_check = king_position in cells_on_which_opponent_can_kill_piece
+
+        return has_check
 
     @property
     def index_based_positions_to_pieces(self):
@@ -506,9 +522,7 @@ class Board:
         }
 
         # no check -> no checkmate, easy
-        if not _player_has_check_in_position(
-            check_for_current_player=True, board_state=self
-        ):
+        if not self._player_has_check_in_position():
             # no troubles
             return return_me
 

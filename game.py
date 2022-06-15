@@ -4,7 +4,7 @@ import time
 from rich import print
 
 from board import Board
-from util import _is_chess_move_str, _player_has_check_in_position
+from _move_related_functions import _is_chess_move_str
 
 
 DEBUG_MODE = 1
