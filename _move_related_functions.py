@@ -26,9 +26,12 @@ def _is_chess_move_str(move):
         "E2 E4" - not case sensitive
     """
     move = move.upper().strip()
-    parts = move.split()
 
-    # print(f"Checking move {move}")
+    # special cases for castling
+    if move in ("O-O", "O-O-O"):
+        return True
+
+    parts = move.split()
 
     try:
         assert len(parts) == 2
@@ -96,7 +99,8 @@ def _get_linearly_distant_cells_from_piece_position(
     Having it written one place is better than having in multiple places, also its usage will be
     super easy from callers.
     """
-    possible_moves_to_killed_pieces = {}
+    # possible_moves_to_killed_pieces = []
+    possible_moves_info = []
 
     # useful, as we can not kill our piece here, but we defend them, so their King cant kill them
     current_player_cells_that_are_defended_by_this_piece = []
@@ -112,9 +116,15 @@ def _get_linearly_distant_cells_from_piece_position(
             if curr_cell in positions_to_pieces:
                 # it is not our piece
                 if positions_to_pieces[curr_cell].player_number != piece.player_number:
-                    possible_moves_to_killed_pieces[curr_cell] = positions_to_pieces[
-                        curr_cell
-                    ]
+
+                    possible_moves_info.append(
+                        {
+                            "new_position": curr_cell,
+                            "killed_opponent_piece_position": positions_to_pieces[
+                                curr_cell
+                            ].position,
+                        }
+                    )
 
                 # defending our piece
                 else:
@@ -123,11 +133,13 @@ def _get_linearly_distant_cells_from_piece_position(
                     )
                 break
             else:
-                possible_moves_to_killed_pieces[curr_cell] = None
+                possible_moves_info.append(
+                    {"new_position": curr_cell, "killed_opponent_piece_position": None}
+                )
 
             curr_cell = func_to_apply(curr_cell)
 
     return (
         current_player_cells_that_are_defended_by_this_piece,
-        possible_moves_to_killed_pieces,
+        possible_moves_info,
     )

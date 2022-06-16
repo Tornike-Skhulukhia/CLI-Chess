@@ -10,36 +10,36 @@ def convert_basic_move_notation_to_chess_notation(
     """
     assert _is_chess_move_str(basic_move_str)
 
+    # special case - short or long castle
+    if basic_move_str in ("O-O", "O-O-O"):
+        return basic_move_str
+
     from_cell, to_cell = basic_move_str.upper().split()
 
     # ex: N, Q, K, ""
-    moving_piece = board_state_before_move.positions_to_pieces[from_cell]
+    (
+        move_info,
+        moving_piece,
+        _from,
+        _to,
+    ) = board_state_before_move.get_move_info_if_it_is_valid_move_str(basic_move_str)
+    assert bool(move_info)
+
     moving_piece_col, moving_piece_row = moving_piece.position
     piece_name_prefix = moving_piece.chess_notation_prefix
 
-    # kill | x   # inacurate for an pasaunt
-    # piece_being_killed = board_state_before_move.positions_to_pieces.get(to_cell)
-    # vs approach N2
-    # is it 100% correct? test
-    piece_being_killed = moving_piece.get_possible_moves(board_state_before_move)[
-        to_cell
-    ]
+    # kill | x   # inacurate for an pasaunt ?
+    piece_being_killed = move_info.get("killed_opponent_piece_position")
+
     kill_prefix = "x" if piece_being_killed else ""
 
     # check | +
     board_after_move = board_state_before_move.get_deepcopy()
     copied_piece = board_after_move.positions_to_pieces[moving_piece.position]
-    # copied_piece_being_killed =
-    copied_piece_being_killed = (
-        board_after_move.positions_to_pieces[piece_being_killed.position]
-        if piece_being_killed
-        else piece_being_killed
-    )
 
-    copied_piece.change_board_pieces_state_using_move(
-        new_position=to_cell,
+    copied_piece.apply_move_info_to_board(
         board_state=board_after_move,
-        killed_opponent_piece=copied_piece_being_killed,
+        move_info=move_info,
     )
 
     check_suffix = "+" if board_after_move._player_has_check_in_position() else ""
@@ -58,7 +58,9 @@ def convert_basic_move_notation_to_chess_notation(
         }
 
         pieces_that_can_move_to_new_position = [
-            piece for piece, moves in possible_moves_info.items() if to_cell in moves
+            piece
+            for piece, moves_infos in possible_moves_info.items()
+            if to_cell in [i["new_position"] for i in moves_infos]
         ]
 
         assert len(pieces_that_can_move_to_new_position) > 0
@@ -75,7 +77,7 @@ def convert_basic_move_notation_to_chess_notation(
             if cols.count(moving_piece_col) == 1:
                 clarification_prefix = moving_piece_col
 
-            # yes, if on given column only one such piece exists
+            # yes, if on given row only one such piece exists
             elif rows.count(moving_piece_row) == 1:
                 clarification_prefix = moving_piece_row
             else:
@@ -98,6 +100,12 @@ def convert_chess_notation_to_basic_move_notation(
     Ex:
         "Nf3" --> "G1 F3"
     """
+    # special case - short or long castle
+    if chess_notation in ("O-O", "O-O-O"):
+        return chess_notation
+
+    chess_notation_bak = chess_notation
+
     # kills and checks signs do not change move at all
     chess_notation = chess_notation.replace("+", "").replace("x", "")
     move_to = chess_notation[-2:].upper()
@@ -123,7 +131,8 @@ def convert_chess_notation_to_basic_move_notation(
     pieces_that_can_move_there = [
         i
         for i in possible_move_initializer_pieces
-        if move_to in i.get_possible_moves(board_state_before_move)
+        if move_to
+        in [i["new_position"] for i in i.get_possible_moves(board_state_before_move)]
     ]
 
     if len(pieces_that_can_move_there) == 1:
@@ -133,7 +142,10 @@ def convert_chess_notation_to_basic_move_notation(
     else:
         # if more than 1 piece can move there,
         # we will have row, column or column&row prefixes to identify exact piece
-        assert 1 <= len(move_from_str) <= 2
+        if not 1 <= len(move_from_str) <= 2:
+            raise ValueError(
+                f"Can not uniquely identify which piece to use for given move {chess_notation_bak}"
+            )
 
         # get row and column for all possibilities
         row, col = "", ""

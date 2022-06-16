@@ -21,6 +21,8 @@ from _notation_converters import (
 
 NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
 INVALID_MOVE_ERROR_TEXT = "Invalid move"
+CANNOT_DO_CASTLE_ERROR_TEXT = "You can not castle that way"
+SUCCESSFULL_CASTLING_TEXT = "Successfull castle"
 
 
 class Board:
@@ -76,6 +78,10 @@ class Board:
 
     def apply_chess_notation_moves(self, moves_list):
         """
+        # ! test on more real games and add support for 1-0 and 0-1 and 1/2 identification
+        to automatically stop and not cause errors...
+
+
                Get list of moves written in chess notation like this:
 
         # link for this specific game example - https://www.chess.com/games/view/15792867
@@ -117,23 +123,27 @@ class Board:
         for moves in moves_list:
             for move in moves:
 
-                basic_move = convert_chess_notation_to_basic_move_notation(move, self)
-
-                from_cell, to_cell = basic_move.split()
-                piece = self.positions_to_pieces[from_cell]
-
-                # print(f"Checking chess notation move {move} --> {basic_move}")
-
-                self.update_moves_history(
-                    last_move_from=from_cell, last_move_to=to_cell
+                basic_move_str = convert_chess_notation_to_basic_move_notation(
+                    move, self
                 )
 
-                piece.change_board_pieces_state_using_move(
-                    new_position=to_cell,
-                    killed_opponent_piece=piece.get_possible_moves(board_state=self)[
-                        to_cell
-                    ],
+                (
+                    move_info,
+                    piece,
+                    _from,
+                    _to,
+                ) = self.get_move_info_if_it_is_valid_move_str(basic_move_str)
+
+                if not move_info:
+                    raise ValueError(
+                        f"Move {move} is not possible on current board configuration"
+                    )
+
+                self.update_moves_history(last_move_from=_from, last_move_to=_to)
+
+                piece.apply_move_info_to_board(
                     board_state=self,
+                    move_info=move_info,
                 )
 
     def get_deepcopy(self):
@@ -173,6 +183,142 @@ class Board:
             positions_to_pieces[piece.position] = piece
 
         return positions_to_pieces
+
+    def _get_player_rook_info_if_possible_to_do_castling_with_it(
+        self, castling_case="short"
+    ):
+        """
+        return rooks old and new positions, if castling can be done, None otherwise
+        """
+        assert castling_case in ("short", "long")
+
+        positions_info = {
+            "short": {
+                1: "H1",
+                2: "H8",
+            },
+            "long": {
+                1: "A1",
+                2: "A8",
+            },
+        }
+
+        # make sure cells between Rook and King are free
+        # check only B column here as 2 cells from King sides are checked in king check method
+        if (
+            castling_case == "long"
+            and {1: "B1", 2: "B8"}[self._player_turn] in self.positions_to_pieces
+        ):
+            return None
+
+        position_to_expect_rook_on = positions_info[castling_case][self._player_turn]
+
+        if position_to_expect_rook_on in self.positions_to_pieces:
+            piece = self.positions_to_pieces[position_to_expect_rook_on]
+
+            if (
+                piece.piece_name == "rook"
+                and piece.moves_count == 0
+                and piece.player_number == self._player_turn
+            ):
+                position_if_castled = {
+                    "short": {
+                        1: "F1",
+                        2: "F8",
+                    },
+                    "long": {
+                        1: "D1",
+                        2: "D8",
+                    },
+                }[castling_case][self._player_turn]
+
+                return piece.position, position_if_castled
+
+        return None
+
+    @property
+    def _current_player_has_active_check(self):
+        # get this info from chess based notation
+        last_moves = [j for i in self.chess_notation_moves[-2:] for j in i]
+
+        if len(last_moves) == 0:
+            return False
+
+        return last_moves[-1].endswith("+")
+
+    def _get_player_king_info_if_possible_to_do_castling_with_it(
+        self, castling_case="short"
+    ):
+        """
+        Return kings new position, if castling can be done, None otherwise
+        """
+        assert castling_case in ("short", "long")
+
+        king = self.current_player_king
+
+        # in chess king can not castle if it has active check
+        # or have already moved even once
+        if king.moves_count > 0 or self._current_player_has_active_check:
+            return None
+
+        # make sure cells that castling needs are free
+        taken_positions = self.positions_to_pieces
+        for i in {
+            "short": {
+                1: ["F1", "G1"],
+                2: ["F8", "G8"],
+            },
+            "long": {
+                1: ["D1", "C1"],
+                2: ["D8", "C8"],
+            },
+        }[castling_case][self._player_turn]:
+
+            if i in taken_positions:
+                return None
+
+        # check cells nearby, are they free from checks?
+        cells_info = {
+            "short": {
+                1: "F1",
+                2: "F8",
+            },
+            "long": {
+                1: "D1",
+                2: "D8",
+            },
+        }
+
+        # checking 1 cell for checks is enough here, as we check current
+        # cell before this steps and king position after castle ends in
+        # outer function that in general removes technically possible moves
+        # from possible moves if after the move check is present
+        cell = cells_info[castling_case][self._player_turn]
+
+        # king must not have checks not only before and after, but also
+        # in between those as well, so check for this
+        copied_board_state = self.get_deepcopy()
+        copied_king = copied_board_state.positions_to_pieces[king.position]
+
+        copied_king.apply_move_info_to_board(
+            board_state=copied_board_state,
+            move_info={"new_position": cell, "killed_opponent_piece_position": None},
+        )
+        if copied_board_state._current_player_has_active_check:
+            return None
+
+        king_position_if_castled = {
+            "short": {
+                1: "G1",
+                2: "G8",
+            },
+            "long": {
+                1: "C1",
+                2: "C8",
+            },
+        }[castling_case][self._player_turn]
+
+        return king_position_if_castled
 
     def get_current_player_pieces_with_piece_prefix(self, chess_notation):
         """
@@ -341,18 +487,18 @@ class Board:
 
         # get all possible killing moves that opponent pieces can make
         # for pawns, we care only about killing cells here, as they can't push King forward :-)
-        cells_on_which_opponent_can_kill_piece = set()
 
         for piece in opponent_pieces:
-            cells = piece.get_all_possible_cells_where_this_piece_can_kill(
-                positions_to_pieces=self.positions_to_pieces,
+            cells_on_which_opponent_can_kill_piece = (
+                piece.get_all_possible_cells_where_this_piece_can_kill(
+                    board_state=self,
+                )
             )
 
-            cells_on_which_opponent_can_kill_piece.update(cells)
+            if king_position in cells_on_which_opponent_can_kill_piece:
+                return True
 
-        has_check = king_position in cells_on_which_opponent_can_kill_piece
-
-        return has_check
+        return False
 
     @staticmethod
     def _clear_screen():
@@ -467,53 +613,73 @@ class Board:
 
         self._remove_piece_from_pieces(killed_opponent_piece)
 
+    def get_move_info_if_it_is_valid_move_str(self, move_str):
+        """
+        Returns False if move does not seem valid, dictionary with move info otherwise
+        """
+        move_str = move_str.upper()
+        move_info = False
+        piece = None
+        _from = ""
+        _to = ""
+
+        # if castle was requested
+        if move_str in ("O-O", "O-O-O"):
+
+            king = self.current_player_king
+
+            possible_moves = king.get_possible_moves(board_state=self)
+
+            for i in possible_moves:
+                if i.get("castle_notation") == move_str:
+                    move_info = i
+                    _from = king.position
+                    _to = i["new_position"]
+                    piece = king
+                    break
+
+        else:
+            # normal moves
+            move_start, move_end = move_str.split()
+
+            if move_start in {i.position for i in self.current_player_pieces}:
+                _piece = self.positions_to_pieces[move_start]
+
+                # can that piece make that move ?
+                possible_moves = _piece.get_possible_moves(board_state=self)
+
+                for i in possible_moves:  # if piece can move there
+                    if i["new_position"] == move_end:
+                        move_info = i
+                        _from = move_start
+                        _to = move_end
+                        piece = _piece
+                        break
+
+        return move_info, piece, _from, _to
+
     def move_a_piece_if_possible_and_add_validation_errors_if_necessary(self, move_str):
         """'
         args:
             1. move_str - ex: "E2 E4"
-
-        if move is not possible, return False,
-        otherwise change piece positions and return True
         """
-        _from, _to = move_str.split()
 
-        ### make a move only if space is empty for now
-        ### and move player is trying to make starts from his/her piece
-        ### later add other all sorts of necessary checks
+        move_info, piece, _from, _to = self.get_move_info_if_it_is_valid_move_str(
+            move_str
+        )
 
-        player_pieces_positions = {i.position for i in self.current_player_pieces}
-
-        # do move checks
-        if not _from in player_pieces_positions:
-            self._add_temporary_error(
-                NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT.format(_from)
-            )
-            return False
-
-        # if all previous checks are done
-        # get piece
-        piece = self.positions_to_pieces[_from]
-
-        # can that piece make that move ?
-        possible_moves = piece.get_possible_moves(board_state=self)
-
-        if not _to in possible_moves:
+        if not move_info:
             self._add_temporary_error(INVALID_MOVE_ERROR_TEXT)
             return False
-
-        killed_opponent_piece = possible_moves[_to]
-
-        print(f"{killed_opponent_piece=}")
 
         # run it before making actual changes as current notations translations implementation
         # needs board state info before making actual move on board itself
         # as conversions that happen, make decisions based on current board state, not after move
         self.update_moves_history(last_move_from=_from, last_move_to=_to)
 
-        piece.change_board_pieces_state_using_move(
-            new_position=_to,
+        piece.apply_move_info_to_board(
             board_state=self,
-            killed_opponent_piece=killed_opponent_piece,
+            move_info=move_info,
         )
 
         return True
@@ -538,7 +704,7 @@ class Board:
             if len(possible_moves) > 0:
                 return_me["move_that_makes_check_disappear"] = {
                     "piece": piece,
-                    "new_position": list(possible_moves.keys())[0],
+                    "new_position": possible_moves[0]["new_position"],
                 }
                 return return_me
 

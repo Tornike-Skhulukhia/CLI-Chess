@@ -10,6 +10,11 @@
 
 . Maybe add some kind of historical info live visibility like famous players that had similar situations and some link or small info, if game is started in this specific info-ish mode, which can make game a bit more funny  
 
+# how moves work
+. some explanation
+. special cases explanations, like castling - using O-O (O-s, not zeros) or O-O-O for short/long castling, plus using just basic notation for only king movement
+
+
 # todo after basic functionalities
 . add good docs for each functions about their input/output and functionalities/roles
 . ability to play using 2 different computers on same network using IP sharing

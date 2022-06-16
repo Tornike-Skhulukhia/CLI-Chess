@@ -77,6 +77,7 @@ class Piece(metaclass=abc.ABCMeta):
             raise ValueError("Please use correct position from Range A1 to H8")
 
         self._position = position
+        self.increase_moves_count()
 
     @staticmethod
     def index_based_position_to_position(index_based_position):
@@ -125,12 +126,14 @@ class Piece(metaclass=abc.ABCMeta):
 
         return all_pieces
 
-    def get_all_possible_cells_where_this_piece_can_kill(self, positions_to_pieces):
+    def get_all_possible_cells_where_this_piece_can_kill(self, board_state):
+        # positions_to_pieces = board_state.positions_to_pieces
+
         (
             defended_cells,
-            moving_cells,
+            moves_info,
         ) = self.get_all_possible_moves_and_killed_pieces_if_moved(
-            positions_to_pieces,
+            board_state,
             return_defended_cells=True,
         )
 
@@ -138,7 +141,7 @@ class Piece(metaclass=abc.ABCMeta):
         if self.piece_name == "pawn":
             return defended_cells
 
-        defended_cells.extend(list(moving_cells.keys()))
+        defended_cells.extend([i["new_position"] for i in moves_info])
 
         # clean defended_cells as they may have offboard values
         defended_cells = [i for i in defended_cells if _is_chess_cell_coord(i)]
@@ -147,52 +150,64 @@ class Piece(metaclass=abc.ABCMeta):
 
     def get_possible_moves(self, board_state):
         _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
-            board_state.positions_to_pieces
+            board_state
         )
 
-        possible_moves = {
-            i: j for i, j in _possible_moves.items() if _is_chess_cell_coord(i)
-        }
+        possible_moves = [
+            i for i in _possible_moves if _is_chess_cell_coord(i["new_position"])
+        ]
 
-        valid_possible_moves = {}
+        valid_possible_moves = []
 
-        for new_position, killed_opponent_piece in possible_moves.items():
+        for move_info in possible_moves:
 
             copied_board_state = board_state.get_deepcopy()
             copied_piece = copied_board_state.positions_to_pieces[self.position]
-            copied_killed_opponent_piece = (
-                copied_board_state.positions_to_pieces[killed_opponent_piece.position]
-                if killed_opponent_piece
-                else killed_opponent_piece
-            )
 
-            copied_piece.change_board_pieces_state_using_move(
-                new_position=new_position,
+            # apply move itself
+            copied_piece.apply_move_info_to_board(
                 board_state=copied_board_state,
-                killed_opponent_piece=copied_killed_opponent_piece,
+                move_info=move_info,
                 swap_player_turn=False,
             )
 
             if not copied_board_state._player_has_check_in_position():
-                valid_possible_moves[new_position] = killed_opponent_piece
+                valid_possible_moves.append(move_info)
 
         return valid_possible_moves
 
-    def change_board_pieces_state_using_move(
+    def apply_move_info_to_board(
         self,
-        new_position,
         board_state,
-        killed_opponent_piece,
+        move_info,
         swap_player_turn=True,
     ):
         """
-        move current piece in given technically valid new location and kill any piece required
+        Execute given move_info instructions to make a move on board.
+
+        Usually it means moving a piece and killing other piece if necessary, but in case of
+        castling, we here will also get additional info about rook that needs to be also moved
+        when doing castle operation with king so we also handle that.
         """
-        if killed_opponent_piece:
+
+        if move_info["killed_opponent_piece_position"]:
+            killed_opponent_piece = board_state.positions_to_pieces[
+                move_info["killed_opponent_piece_position"]
+            ]
+
             board_state.kill_piece(killed_opponent_piece)
 
-        self.position = new_position
-        self.increase_moves_count()
+        self.position = move_info["new_position"]
+
+        # also handle rooks in case of castling
+        if move_info.get("additional_movements"):
+            _from, _to = (
+                move_info["additional_movements"]["from"],
+                move_info["additional_movements"]["to"],
+            )
+
+            rook = board_state.positions_to_pieces[_from]
+            rook.position = _to
 
         if swap_player_turn:
             board_state._swap_player_turn()
@@ -210,10 +225,13 @@ class King(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
-        possible_moves_to_killed_pieces = {}
+
+        positions_to_pieces = board_state.positions_to_pieces
+
+        possible_moves_info = []
         defended_cells = []
         possible_moves = []
 
@@ -234,19 +252,61 @@ class King(Piece):
         for move in possible_moves:
             # empty destination cell
             if move not in positions_to_pieces:
-                possible_moves_to_killed_pieces[move] = None
+                possible_moves_info.append(
+                    {
+                        "new_position": move,
+                        "killed_opponent_piece_position": None,
+                    }
+                )
 
             # opponent piece on cell
             elif positions_to_pieces[move].player_number != self.player_number:
-                possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+                possible_moves_info.append(
+                    {
+                        "new_position": move,
+                        "killed_opponent_piece_position": positions_to_pieces[
+                            move
+                        ].position,
+                    }
+                )
             # our piece on cell
             else:
                 defended_cells.append(move)
 
-        if return_defended_cells:
-            return defended_cells, possible_moves_to_killed_pieces
+        # is castling possible ?
+        for castling_case, castle_notation in {"short": "O-O", "long": "O-O-O"}.items():
 
-        return possible_moves_to_killed_pieces
+            rook_info = (
+                board_state._get_player_rook_info_if_possible_to_do_castling_with_it(
+                    castling_case
+                )
+            )
+            king_info = (
+                board_state._get_player_king_info_if_possible_to_do_castling_with_it(
+                    castling_case
+                )
+            )
+
+            if bool(rook_info) and bool(king_info):
+                old_rook_pos, new_rook_pos = rook_info
+                new_king_pos = king_info
+
+                possible_moves_info.append(
+                    {
+                        "new_position": new_king_pos,
+                        "killed_opponent_piece_position": None,
+                        "additional_movements": {
+                            "from": old_rook_pos,
+                            "to": new_rook_pos,
+                        },
+                        "castle_notation": castle_notation,
+                    }
+                )
+
+        if return_defended_cells:
+            return defended_cells, possible_moves_info
+
+        return possible_moves_info
 
 
 class Queen(Piece):
@@ -261,9 +321,10 @@ class Queen(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
+        positions_to_pieces = board_state.positions_to_pieces
 
         defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
@@ -300,9 +361,10 @@ class Rook(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
+        positions_to_pieces = board_state.positions_to_pieces
 
         defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
@@ -333,9 +395,10 @@ class Bishop(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
+        positions_to_pieces = board_state.positions_to_pieces
 
         defended_cells, info = _get_linearly_distant_cells_from_piece_position(
             piece=self,
@@ -366,10 +429,13 @@ class Knight(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
-        possible_moves_to_killed_pieces = {}
+        positions_to_pieces = board_state.positions_to_pieces
+
+        # possible_moves_to_killed_pieces = {}
+        possible_moves_info = []
         possible_moves = []
 
         _pos = self.position
@@ -399,19 +465,31 @@ class Knight(Piece):
         for move in possible_moves:
             # empty destination cell
             if move not in positions_to_pieces:
-                possible_moves_to_killed_pieces[move] = None
+                possible_moves_info.append(
+                    {
+                        "new_position": move,
+                        "killed_opponent_piece_position": None,
+                    }
+                )
 
             # opponent piece on cell
             elif positions_to_pieces[move].player_number != self.player_number:
-                possible_moves_to_killed_pieces[move] = positions_to_pieces[move]
+                possible_moves_info.append(
+                    {
+                        "new_position": move,
+                        "killed_opponent_piece_position": positions_to_pieces[
+                            move
+                        ].position,
+                    }
+                )
             # our piece
             else:
                 defended_cells.append(move)
 
         if return_defended_cells:
-            return defended_cells, possible_moves_to_killed_pieces
+            return defended_cells, possible_moves_info
 
-        return possible_moves_to_killed_pieces
+        return possible_moves_info
 
 
 class Pawn(Piece):
@@ -426,10 +504,13 @@ class Pawn(Piece):
 
     def get_all_possible_moves_and_killed_pieces_if_moved(
         self,
-        positions_to_pieces,
+        board_state,
         return_defended_cells=False,
     ):
-        possible_moves_to_killed_pieces = {}
+        positions_to_pieces = board_state.positions_to_pieces
+
+        # possible_moves_to_killed_pieces = {}
+        possible_moves_info = []
         defended_cells = []
 
         # 1 up | no kill
@@ -440,7 +521,12 @@ class Pawn(Piece):
         )
 
         if top_cell not in positions_to_pieces:
-            possible_moves_to_killed_pieces[top_cell] = None
+            possible_moves_info.append(
+                {
+                    "new_position": top_cell,
+                    "killed_opponent_piece_position": None,
+                }
+            )
 
             # 2 up | no kill
             if self.moves_count == 0:
@@ -451,7 +537,12 @@ class Pawn(Piece):
                 )
 
                 if top_top_cell not in positions_to_pieces:
-                    possible_moves_to_killed_pieces[top_top_cell] = None
+                    possible_moves_info.append(
+                        {
+                            "new_position": top_top_cell,
+                            "killed_opponent_piece_position": None,
+                        }
+                    )
 
         # up left | kill
         top_left = (
@@ -463,9 +554,15 @@ class Pawn(Piece):
         if top_left in positions_to_pieces:
             # opponent piece there
             if positions_to_pieces[top_left].player_number != self.player_number:
-                possible_moves_to_killed_pieces[top_left] = positions_to_pieces[
-                    top_left
-                ]
+                possible_moves_info.append(
+                    {
+                        "new_position": top_left,
+                        "killed_opponent_piece_position": positions_to_pieces[
+                            top_left
+                        ].position,
+                    }
+                )
+
             # our piece there
             else:
                 defended_cells.append(top_left)
@@ -480,9 +577,18 @@ class Pawn(Piece):
         if top_right in positions_to_pieces:
             # opponent piece there
             if positions_to_pieces[top_right].player_number != self.player_number:
-                possible_moves_to_killed_pieces[top_right] = positions_to_pieces[
-                    top_right
-                ]
+                # possible_moves_to_killed_pieces[top_right] = positions_to_pieces[
+                #     top_right
+                # ]
+
+                possible_moves_info.append(
+                    {
+                        "new_position": top_right,
+                        "killed_opponent_piece_position": positions_to_pieces[
+                            top_right
+                        ].position,
+                    }
+                )
             # our piece there
             else:
                 defended_cells.append(top_right)
@@ -493,6 +599,6 @@ class Pawn(Piece):
         ### end TO-BE-IMPLEMENTED
 
         if return_defended_cells:
-            return defended_cells, possible_moves_to_killed_pieces
+            return defended_cells, possible_moves_info
 
-        return possible_moves_to_killed_pieces
+        return possible_moves_info
