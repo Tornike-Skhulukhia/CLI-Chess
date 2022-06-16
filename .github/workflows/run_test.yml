@@ -1,0 +1,13 @@
+name: tests
+on: [push]
+jobs:
+  main_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - run: pip install -r requirements.txt
+      - run: python3 -m pip install git+https://github.com/renatopp/pgnparser
+      - run: python -m unittest discover tests

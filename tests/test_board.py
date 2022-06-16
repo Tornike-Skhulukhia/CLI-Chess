@@ -1,7 +1,7 @@
 import unittest
 
-from .base import BaseTest
-from .real_game_info_retrieval_functions import (
+from base import BaseTest
+from real_game_info_retrieval_functions import (
     get_real_game_chess_moves_history_from_pgn_file,
 )
 from board import Board

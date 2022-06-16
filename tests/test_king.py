@@ -1,6 +1,6 @@
 import unittest
 
-from .base import BaseTest
+from base import BaseTest
 
 
 class TestKing(BaseTest):
@@ -51,6 +51,7 @@ class TestKing(BaseTest):
         self._assert_was_successful_move("O-O-O")
 
     def test_can_not_castle_if_middle_cell_has_check(self):
+        # king must jump over check-ed cell to make castle
         self.board.apply_chess_notation_moves(
             [
                 ["d3", "d5"],
@@ -60,9 +61,14 @@ class TestKing(BaseTest):
                 ["e3", "Bb4"],
             ]
         )
+        # it must not be possible
+        self._assert_was_not_successful_move("0-0-0")
 
-        self._assert_was_not_successful_move("O-O-O")
+        # but after clearing check
+        self.board.apply_chess_notation_moves([["Be2", "a6"]])
 
+        # castle should works
+        self._assert_was_successful_move("O-O-O")
 
 
 if __name__ == "__main__":

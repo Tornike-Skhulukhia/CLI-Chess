@@ -2,9 +2,9 @@ from game import Game
 
 
 game = Game(
-    p1_color="dark_red",
-    p2_color="green1",
-    black_cell_color="dark_blue",
+    # p1_color="dark_red",
+    # p2_color="green1",
+    # black_cell_color="dark_blue",
     # white_cell_color="orange",
     # previous_move_cell_color="blue",
 )
@@ -43,17 +43,15 @@ moves = [
 
 
 moves = [
-    ["d4", "Nf6"],
-    ["c4", "e6"],
-    ["Nf3", "b6"],
-    ["g3", "Bb7"],
-    ["Bg2", "Bb4+"],
-    ["Bd2", "c5"],
-    ["Bxb4", "cxb4"],
+    # ["d3", "d5"],
+    # ["Bf4", "Bg4"],
+    # ["Nc3", "Nf6"],
+    # ["Qd2", "e6"],
+    # ["e3", "Bb4"],
 ]
 
 
-moves = []
+# moves = []
 
 game.board.apply_chess_notation_moves(moves)
 

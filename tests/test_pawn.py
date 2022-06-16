@@ -1,6 +1,6 @@
 import unittest
 
-from .base import BaseTest
+from base import BaseTest
 
 
 class TestPawn(BaseTest):
@@ -65,8 +65,47 @@ class TestPawn(BaseTest):
         )
         self._assert_was_not_successful_move("d2 d3")
 
-    def test_can_do_an_passant(self):
-        pass
+    def test_can_do_an_passant_left(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["e4", "a6"],
+                ["e5", "d5"],
+            ]
+        )
+
+        self._assert_was_successful_move("E5 D6")
+
+    def test_can_not_do_an_passant_left_too_late(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["e4", "a6"],
+                ["e5", "d5"],
+                ["a4", "a5"],
+            ]
+        )
+
+        self._assert_was_not_successful_move("E5 D6")
+
+    def test_can_do_an_passant_right(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["e4", "a6"],
+                ["e5", "f5"],
+            ]
+        )
+
+        self._assert_was_successful_move("E5 F6")
+
+    def test_can_not_do_an_passant_right_too_late(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["e4", "a6"],
+                ["e5", "f5"],
+                ["a4", "a5"],
+            ]
+        )
+
+        self._assert_was_not_successful_move("E5 F6")
 
     def test_do_pawn_promotion(self):
         pass

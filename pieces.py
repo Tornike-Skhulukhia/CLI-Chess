@@ -127,15 +127,15 @@ class Piece(metaclass=abc.ABCMeta):
         return all_pieces
 
     def get_all_possible_cells_where_this_piece_can_kill(self, board_state):
-        # positions_to_pieces = board_state.positions_to_pieces
 
-        (
-            defended_cells,
-            moves_info,
-        ) = self.get_all_possible_moves_and_killed_pieces_if_moved(
+        # try:
+        (defended_cells, moves_info,) = self.get_technically_valid_moves_info_for_piece(
             board_state,
             return_defended_cells=True,
+            return_only_places_where_piece_can_directly_kill=True,
         )
+        # except:
+        #     breakpoint()
 
         # pawns can only kill where they defend
         if self.piece_name == "pawn":
@@ -149,9 +149,7 @@ class Piece(metaclass=abc.ABCMeta):
         return defended_cells
 
     def get_possible_moves(self, board_state):
-        _possible_moves = self.get_all_possible_moves_and_killed_pieces_if_moved(
-            board_state
-        )
+        _possible_moves = self.get_technically_valid_moves_info_for_piece(board_state)
 
         possible_moves = [
             i for i in _possible_moves if _is_chess_cell_coord(i["new_position"])
@@ -223,11 +221,17 @@ class King(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
+        # use second argument to avoid recursion limit.
+        # we do not need to know if opponent king have check, when checking where it kills
+        # so, for example, it can kill place where our king wants to move
+        # but this case is losing for ourselves, so here case no problem should arise
+        assert return_only_places_where_piece_can_directly_kill == return_defended_cells
 
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -274,34 +278,35 @@ class King(Piece):
                 defended_cells.append(move)
 
         # is castling possible ?
-        for castling_case, castle_notation in {"short": "O-O", "long": "O-O-O"}.items():
+        if not return_only_places_where_piece_can_directly_kill:
+            for castling_case, castle_notation in {
+                "short": "O-O",
+                "long": "O-O-O",
+            }.items():
 
-            rook_info = (
-                board_state._get_player_rook_info_if_possible_to_do_castling_with_it(
+                rook_info = board_state._get_player_rook_info_if_possible_to_do_castling_with_it(
                     castling_case
                 )
-            )
-            king_info = (
-                board_state._get_player_king_info_if_possible_to_do_castling_with_it(
+
+                king_info = board_state._get_player_king_info_if_possible_to_do_castling_with_it(
                     castling_case
                 )
-            )
 
-            if bool(rook_info) and bool(king_info):
-                old_rook_pos, new_rook_pos = rook_info
-                new_king_pos = king_info
+                if bool(rook_info) and bool(king_info):
+                    old_rook_pos, new_rook_pos = rook_info
+                    new_king_pos = king_info
 
-                possible_moves_info.append(
-                    {
-                        "new_position": new_king_pos,
-                        "killed_opponent_piece_position": None,
-                        "additional_movements": {
-                            "from": old_rook_pos,
-                            "to": new_rook_pos,
-                        },
-                        "castle_notation": castle_notation,
-                    }
-                )
+                    possible_moves_info.append(
+                        {
+                            "new_position": new_king_pos,
+                            "killed_opponent_piece_position": None,
+                            "additional_movements": {
+                                "from": old_rook_pos,
+                                "to": new_rook_pos,
+                            },
+                            "castle_notation": castle_notation,
+                        }
+                    )
 
         if return_defended_cells:
             return defended_cells, possible_moves_info
@@ -319,10 +324,11 @@ class Queen(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -359,10 +365,11 @@ class Rook(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -393,10 +400,11 @@ class Bishop(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -427,10 +435,11 @@ class Knight(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -502,10 +511,11 @@ class Pawn(Piece):
             player_number=player_number,
         )
 
-    def get_all_possible_moves_and_killed_pieces_if_moved(
+    def get_technically_valid_moves_info_for_piece(
         self,
         board_state,
         return_defended_cells=False,
+        return_only_places_where_piece_can_directly_kill=False,
     ):
         positions_to_pieces = board_state.positions_to_pieces
 
@@ -593,9 +603,112 @@ class Pawn(Piece):
             else:
                 defended_cells.append(top_right)
 
+        ### An passant
+        if board_state.total_moves_count > 0:
+            opponents_last_moves = []
+
+            for two_player_moves in board_state.moves:
+                try:
+                    if board_state._player_turn == 1:
+                        opponents_last_moves.append(two_player_moves[1])
+                    else:
+                        opponents_last_moves.append(two_player_moves[0])
+                except IndexError:
+                    pass
+
+            opponents_last_move = opponents_last_moves[-1]
+
+            # for basic moves, we will hav space
+            if " " in opponents_last_move:
+                last_move_from, last_move_to = opponents_last_move.split()
+            else:
+                # for other moves we do not care about an pasants
+                last_move_from, last_move_to = "", ""
+
+        # check for white player
+        if self.player_number == 1:
+            # whites can do it only from 5-th row
+            if self.position[-1] == "5":
+
+                # left an passant check
+                left_cell = _left_coords(self.position)
+                if last_move_to == left_cell:
+
+                    if last_move_to in board_state.positions_to_pieces:
+                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+
+                        if (
+                            last_moved_piece.piece_name == "pawn"
+                            and last_moved_piece.moves_count == 1
+                        ):
+                            possible_moves_info.append(
+                                {
+                                    "new_position": _top_coords(left_cell),
+                                    "killed_opponent_piece_position": left_cell,
+                                }
+                            )
+
+                # right an passant check
+                right_cell = _right_coords(self.position)
+                if last_move_to == right_cell:
+
+                    if last_move_to in board_state.positions_to_pieces:
+
+                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+
+                        if (
+                            last_moved_piece.piece_name == "pawn"
+                            and last_moved_piece.moves_count == 1
+                        ):
+                            possible_moves_info.append(
+                                {
+                                    "new_position": _top_coords(right_cell),
+                                    "killed_opponent_piece_position": right_cell,
+                                }
+                            )
+
+        elif self.player_number == 2:
+            # blacks can do it only from 4-th row
+            if self.position[-1] == "4":
+
+                # left from whites perspective an passant check
+                left_cell = _left_coords(self.position)
+                if last_move_to == left_cell:
+                    if last_move_to in board_state.positions_to_pieces:
+
+                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+
+                        if (
+                            last_moved_piece.piece_name == "pawn"
+                            and last_moved_piece.moves_count == 1
+                        ):
+                            possible_moves_info.append(
+                                {
+                                    "new_position": _bottom_coords(left_cell),
+                                    "killed_opponent_piece_position": left_cell,
+                                }
+                            )
+
+                # right from whites perspective an passant check
+                right_cell = _right_coords(self.position)
+                if last_move_to == right_cell:
+
+                    if last_move_to in board_state.positions_to_pieces:
+                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+
+                        if (
+                            last_moved_piece.piece_name == "pawn"
+                            and last_moved_piece.moves_count == 1
+                        ):
+                            possible_moves_info.append(
+                                {
+                                    "new_position": _bottom_coords(right_cell),
+                                    "killed_opponent_piece_position": right_cell,
+                                }
+                            )
+
         ### TO-BE-IMPLEMENTED
         # exchange pawn to queen if at the end of opposite side
-        # En passant
         ### end TO-BE-IMPLEMENTED
 
         if return_defended_cells:

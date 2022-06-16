@@ -125,6 +125,9 @@ class Board:
         so for example if last position after these moves causes check, player will not be able to play
         something that does not stop king from checking, so just the errors are not visible(we may change that if needed)
         """
+        if len(moves_list) > 0:
+            if not isinstance(moves_list[0], list):
+                raise ValueError("Invalid input, please use lists of lists")
 
         for moves in moves_list:
             for move in moves:
@@ -251,12 +254,15 @@ class Board:
     @property
     def _current_player_has_active_check(self):
         # get this info from chess based notation
-        last_moves = [j for i in self.chess_notation_moves[-2:] for j in i]
 
-        if len(last_moves) == 0:
-            return False
+        return self._player_has_check_in_position()
 
-        return last_moves[-1].endswith("+")
+        # last_moves = [j for i in self.chess_notation_moves[-2:] for j in i]
+
+        # if len(last_moves) == 0:
+        #     return False
+
+        # return last_moves[-1].endswith("+")
 
     def _get_player_king_info_if_possible_to_do_castling_with_it(
         self, castling_case="short"
@@ -312,15 +318,20 @@ class Board:
         copied_board_state = self.get_deepcopy()
         copied_king = copied_board_state.positions_to_pieces[king.position]
 
-        # if self.total_moves_count == 2:
-        # breakpoint()
-
         copied_king.apply_move_info_to_board(
             board_state=copied_board_state,
             move_info={"new_position": cell, "killed_opponent_piece_position": None},
+            swap_player_turn=False,
         )
+
         if copied_board_state._current_player_has_active_check:
             return None
+
+        # if (
+        #     self.positions_to_pieces.get("B4")
+        #     and self.positions_to_pieces.get("B4").piece_name == "bishop"
+        # ):
+        #     breakpoint()
 
         king_position_if_castled = {
             "short": {
@@ -557,15 +568,6 @@ class Board:
                         f"[{piece.color} on {cell_bg_color}]{piece.piece_icon}[/]"
                     )
 
-                    # print()
-                    # print()
-                    # print(piece)
-                    # print(piece.color)
-                    # print(f"{piece.color} on {cell_bg_color}")
-                    # print(f"Printing {text_to_print}")
-                    # print()
-                    # print()
-
                 else:
                     # empty cell
                     text_to_print = f"[on {cell_bg_color}] [/]"
@@ -650,7 +652,7 @@ class Board:
         piece = None
         _from = ""
         _to = ""
-        
+
         if not _is_chess_basic_move_str(move_str):
             return move_info, piece, _from, _to
 
