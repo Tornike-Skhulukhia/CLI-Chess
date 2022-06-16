@@ -1,4 +1,4 @@
-from _move_related_functions import _is_chess_move_str
+from _move_related_functions import _is_chess_basic_move_str
 
 
 def convert_basic_move_notation_to_chess_notation(
@@ -8,7 +8,7 @@ def convert_basic_move_notation_to_chess_notation(
     Ex:
         "G1 F3" --> "Nf3"
     """
-    assert _is_chess_move_str(basic_move_str)
+    assert _is_chess_basic_move_str(basic_move_str)
 
     # special case - short or long castle
     if basic_move_str in ("O-O", "O-O-O"):
@@ -23,7 +23,10 @@ def convert_basic_move_notation_to_chess_notation(
         _from,
         _to,
     ) = board_state_before_move.get_move_info_if_it_is_valid_move_str(basic_move_str)
-    assert bool(move_info)
+    try:
+        assert bool(move_info)
+    except:
+        breakpoint()
 
     moving_piece_col, moving_piece_row = moving_piece.position
     piece_name_prefix = moving_piece.chess_notation_prefix

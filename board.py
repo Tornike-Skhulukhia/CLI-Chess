@@ -1,6 +1,6 @@
 """
 Not implemented:
-    . king castling
+    . king castling | +
     . an passant
     . exchanging pawn to queen or other pieces when in the end...
 Bugs
@@ -13,26 +13,31 @@ import os
 
 from rich import print
 
-from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
+from _move_related_functions import (
+    _is_chess_basic_move_str,
+    _is_chess_notation_move_str,
+)
 from _notation_converters import (
     convert_basic_move_notation_to_chess_notation,
     convert_chess_notation_to_basic_move_notation,
 )
+from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
 
-NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
 INVALID_MOVE_ERROR_TEXT = "Invalid move"
-CANNOT_DO_CASTLE_ERROR_TEXT = "You can not castle that way"
-SUCCESSFULL_CASTLING_TEXT = "Successfull castle"
+NOT_A_CHESS_MOVE_ERROR_TEXT = "Not a chess move"
+# NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
+# CANNOT_DO_CASTLE_ERROR_TEXT = "You can not castle that way"
+# SUCCESSFULL_CASTLING_TEXT = "Successfull castle"
 
 
 class Board:
     def __init__(
         self,
-        p1_color,
-        p2_color,
-        black_cell_color,
-        white_cell_color,
-        previous_move_cell_color,
+        p1_color="bright_white",
+        p2_color="grey3",
+        black_cell_color="grey58",
+        white_cell_color="grey37",
+        previous_move_cell_color="green4",
     ):
         # colors to draw player pieces
         self.p1_color = p1_color
@@ -120,8 +125,13 @@ class Board:
         so for example if last position after these moves causes check, player will not be able to play
         something that does not stop king from checking, so just the errors are not visible(we may change that if needed)
         """
+
         for moves in moves_list:
             for move in moves:
+                try:
+                    assert _is_chess_notation_move_str(move)
+                except:
+                    breakpoint()
 
                 basic_move_str = convert_chess_notation_to_basic_move_notation(
                     move, self
@@ -139,7 +149,9 @@ class Board:
                         f"Move {move} is not possible on current board configuration"
                     )
 
-                self.update_moves_history(last_move_from=_from, last_move_to=_to)
+                self.update_moves_history(
+                    last_move_from=_from, last_move_to=_to, move_info=move_info
+                )
 
                 piece.apply_move_info_to_board(
                     board_state=self,
@@ -300,6 +312,9 @@ class Board:
         copied_board_state = self.get_deepcopy()
         copied_king = copied_board_state.positions_to_pieces[king.position]
 
+        # if self.total_moves_count == 2:
+        # breakpoint()
+
         copied_king.apply_move_info_to_board(
             board_state=copied_board_state,
             move_info={"new_position": cell, "killed_opponent_piece_position": None},
@@ -350,7 +365,7 @@ class Board:
     def _reset_errors(self):
         self.errors_to_display = []
 
-    def update_moves_history(self, last_move_from, last_move_to):
+    def update_moves_history(self, last_move_from, last_move_to, move_info):
         """
         We store 2 type of history, 1 with just moves like ("g1 f3", "e7 e5")
 
@@ -368,12 +383,19 @@ class Board:
 
         ### update last move item
         # for basic moves history
-        basic_move_str = f"{last_move_from} {last_move_to}"
+
+        # if it seems castling case, save moves info as castling notation, not the basic from-to cells notation
+        if move_info and move_info.get("castle_notation"):
+            basic_move_str = move_info["castle_notation"]
+
+        else:
+            basic_move_str = f"{last_move_from} {last_move_to}"
+
         self.moves[-1].append(basic_move_str)
 
         # for chess notation history
         chess_notation_move = convert_basic_move_notation_to_chess_notation(
-            basic_move_str=basic_move_str.lower(),
+            basic_move_str=basic_move_str,
             board_state_before_move=self,
         )
 
@@ -394,8 +416,6 @@ class Board:
         Create all pieces as they should be when game starts
         and assign them to current board object.
         """
-
-        print("Pieces are going to be Ready!!!")
 
         col_1, col_2 = self.p1_color, self.p2_color
 
@@ -439,8 +459,6 @@ class Board:
 
         self.player_1_pieces = pieces_1
         self.player_2_pieces = pieces_2
-
-        print("Pieces Ready!!!")
 
     def _remove_piece_from_pieces(self, piece_to_kill):
         if piece_to_kill:
@@ -520,6 +538,8 @@ class Board:
         # that stores info about what to print and in what color and when,
         # so that applying different styles after basic moves, will be much easier
 
+        # breakpoint()
+
         for row_index in range(8):
             # row number
             print(f"[grey37]{8 - row_index}[/]", end="")
@@ -536,6 +556,15 @@ class Board:
                     text_to_print = (
                         f"[{piece.color} on {cell_bg_color}]{piece.piece_icon}[/]"
                     )
+
+                    # print()
+                    # print()
+                    # print(piece)
+                    # print(piece.color)
+                    # print(f"{piece.color} on {cell_bg_color}")
+                    # print(f"Printing {text_to_print}")
+                    # print()
+                    # print()
 
                 else:
                     # empty cell
@@ -617,11 +646,15 @@ class Board:
         """
         Returns False if move does not seem valid, dictionary with move info otherwise
         """
-        move_str = move_str.upper()
         move_info = False
         piece = None
         _from = ""
         _to = ""
+        
+        if not _is_chess_basic_move_str(move_str):
+            return move_info, piece, _from, _to
+
+        move_str = move_str.upper()
 
         # if castle was requested
         if move_str in ("O-O", "O-O-O"):
@@ -658,31 +691,36 @@ class Board:
 
         return move_info, piece, _from, _to
 
-    def move_a_piece_if_possible_and_add_validation_errors_if_necessary(self, move_str):
-        """'
-        args:
-            1. move_str - ex: "E2 E4"
+    def make_a_move_if_possible(self, move_str):
         """
+        main entry point from game.
+
+        Get raw move string input from user and if it seems valid,
+        apply the move and return False, if not, return False and errors
+        that this move had, like incorrect move format, correct format but invalid move e.t.c
+        """
+        move_str = move_str.upper()
 
         move_info, piece, _from, _to = self.get_move_info_if_it_is_valid_move_str(
             move_str
         )
 
         if not move_info:
-            self._add_temporary_error(INVALID_MOVE_ERROR_TEXT)
-            return False
+            return False, [INVALID_MOVE_ERROR_TEXT]
 
         # run it before making actual changes as current notations translations implementation
         # needs board state info before making actual move on board itself
         # as conversions that happen, make decisions based on current board state, not after move
-        self.update_moves_history(last_move_from=_from, last_move_to=_to)
+        self.update_moves_history(
+            last_move_from=_from, last_move_to=_to, move_info=move_info
+        )
 
         piece.apply_move_info_to_board(
             board_state=self,
             move_info=move_info,
         )
 
-        return True
+        return True, []
 
     def get_current_player_troubles(self):
         return_me = {

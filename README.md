@@ -19,3 +19,21 @@
 . add good docs for each functions about their input/output and functionalities/roles
 . ability to play using 2 different computers on same network using IP sharing
 . add checks that chess notation does really seem chess notation when getting it?
+
+
+# how to run tests
+. ex: python -m tests.test_pawn
+
+# other
+. for castling, moving king 2 places is enough, and even in chess notation
+if it is written that way and not O-O for example, it will load it and store as O-O move
+
+
+# installation
+. for usage
+. for testing  
+    . also install https://github.com/renatopp/pgnparser from github directly:
+        ```bash
+        python3 -m pip install git+https://github.com/renatopp/pgnparser
+        ```
+

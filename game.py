@@ -4,7 +4,6 @@ import time
 from rich import print
 
 from board import Board
-from _move_related_functions import _is_chess_move_str
 
 
 DEBUG_MODE = 1
@@ -49,22 +48,12 @@ class Game:
             . finished - game is lost/exited
         """
         self._game_status = "initial"
-        self._player_turn = 1  # which player should make a move, first, or second
 
-    def _get_next_move_and_add_error_if_necessary(self):
-        move_str = input("Make a move\n").upper()
-        move_is_valid = _is_chess_move_str(move_str)
-
-        if not move_is_valid:
-            self.board._add_temporary_error("Not a move, try again")
-
-        return move_str, move_is_valid
 
     def play(self):
         print("Game Started")
 
         self._game_status = "running"
-        print("=" * 100)
 
         # start game and maintain it before necessary
         while self._game_status == "running":
@@ -72,38 +61,39 @@ class Game:
             # draw new board
             self.board.draw(debug_mode=DEBUG_MODE)
 
-            # get move
-            move_str, _move_is_valid = self._get_next_move_and_add_error_if_necessary()
+            move_was_successfull, move_errors = self.board.make_a_move_if_possible(
+                input()
+            )
 
             # make sure it seems valid chess move
-            if not _move_is_valid:
+            if not move_was_successfull:
+                assert len(move_errors) > 0
+
+                for error_text in move_errors:
+                    self.board._add_temporary_error(error_text)
+
                 continue
 
-            # reorganize move_a_piece_if_possible_and_add_validation_errors_if_necessary function
-            # later, so that it also returns errors and it is more clear what it does
-            if self.board.move_a_piece_if_possible_and_add_validation_errors_if_necessary(
-                move_str
-            ):
-                # after our move, does opponent has check/checkmate?
-                troubles = self.board.get_current_player_troubles()
+            # after our move, does opponent has check/checkmate?
+            troubles = self.board.get_current_player_troubles()
 
-                if troubles["player_is_checked"]:
-                    if troubles["player_is_checkmated"]:
-                        # game over, current player lose
-                        self.board._add_temporary_error("You lost the game!")
+            if troubles["player_is_checked"]:
+                if troubles["player_is_checkmated"]:
+                    # game over, current player lose
+                    self.board._add_temporary_error("You lost the game!")
 
-                        self._game_status = "Finished"
+                    self._game_status = "Finished"
 
-                        self.board.draw(debug_mode=DEBUG_MODE)
-                    else:
-                        info = troubles["move_that_makes_check_disappear"]
+                    self.board.draw(debug_mode=DEBUG_MODE)
+                else:
+                    info = troubles["move_that_makes_check_disappear"]
 
-                        self.board._add_temporary_error(
-                            f'possible move out of check : {info["piece"]} to {info["new_position"]}'
-                        )
+                    self.board._add_temporary_error(
+                        f'possible move out of check : {info["piece"]} to {info["new_position"]}'
+                    )
 
-                        # add it after previous message as draw function gets info from end first
-                        self.board._add_temporary_error("Check!")
+                    # add it after previous message as draw function gets info from end first
+                    self.board._add_temporary_error("Check!")
 
             time.sleep(0.1)
 

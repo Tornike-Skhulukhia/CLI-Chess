@@ -4,6 +4,8 @@ def _is_chess_cell_coord(coord_str):
         E2 - True
         T8 - False
     """
+    res = False
+
     try:
         if all(
             [
@@ -12,21 +14,21 @@ def _is_chess_cell_coord(coord_str):
                 coord_str[1] in "12345678",
             ]
         ):
-            return True
+            res = True
 
     except Exception:
-        return False
+        pass
+
+    return res
 
 
-def _is_chess_move_str(move):
+def _is_chess_basic_move_str(move):
     """
     Just validate that move has proper format, not any logic yet
 
     Format:
-        "E2 E4" - not case sensitive
+        "E2 E4" - case sensitive
     """
-    move = move.upper().strip()
-
     # special cases for castling
     if move in ("O-O", "O-O-O"):
         return True
@@ -37,6 +39,61 @@ def _is_chess_move_str(move):
         assert len(parts) == 2
         return _is_chess_cell_coord(parts[0]) and _is_chess_cell_coord(parts[1])
     except Exception:
+        return False
+
+
+def _is_chess_notation_move_str(move):
+    """
+    This does not need to be perfect, just good enough, as only used for real game notations.
+
+    We can refine it later if necessary.
+    """
+
+    try:
+        assert len(move) >= 2
+
+        # special cases for castling
+        if move in ("O-O", "O-O-O"):
+            return True
+
+        assert " " not in move
+
+        assert all([i in "abcdefgh12345678xKQNBR+x" for i in move])
+
+        # check can only be at the end
+        if move.count("+") > 0:
+            assert move.endswith("+")
+            move = move[:-1]
+
+
+        # kills
+        if move.count("x") > 0:
+            # max 1 kill sign
+            assert move.count("x") == 1
+            # but not at the start(even for pawn, first will be column if killing something)
+            assert not move.startswith("x")
+
+            move = move.replace("x", "")
+
+        # digits
+        digits_count = len([i for i in move if i.isdigit()])
+        assert 1 <= digits_count <= 2
+
+        assert move[-1].isdigit()
+
+        if digits_count == 2:
+            assert move[-3].isdigit()
+
+
+        # if piece prefix is here
+        if any([i for i in move if i in "KQNBR"]):
+            # it must be first letter
+            assert move[0] in "KQNBR"
+            # and the only one
+            assert len([i for i in move if i in "KQNBR"]) == 1
+
+        return True
+    except AssertionError:
         return False
 
 
