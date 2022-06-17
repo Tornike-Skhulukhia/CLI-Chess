@@ -19,11 +19,21 @@ class TestIsChessCellCoord(unittest.TestCase):
 
 class TestIsChessBasicMoveStr(unittest.TestCase):
     def test_is_chess_basic_move_str(self):
-        for i in ["E2 E4", "C1 E3", "A8 A1", "B1 C6", "O-O", "O-O-O"]:
+        for i in [
+            "E2 E4",
+            "C1 E3",
+            "A8 A1",
+            "B1 C6",
+            "O-O",
+            "O-O-O",
+            "E7 E8=N",
+            "E7 E8=Q",
+            "C7 C8=R",
+        ]:
             self.assertTrue(_is_chess_basic_move_str(i))
 
     def test_is_not_chess_basic_move_str(self):
-        for i in ["e2 e4", "B1 C9", "B0 B7", "O", "OO", ""]:
+        for i in ["e2 e2", "B1 C9", "B0 B7", "O", "OO", "", "E7 E8=QM", "C7 C8=Rx"]:
             self.assertFalse(_is_chess_basic_move_str(i))
 
 

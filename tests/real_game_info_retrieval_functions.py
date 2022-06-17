@@ -19,6 +19,8 @@ def get_real_game_chess_moves_history_from_pgn_file(file_path):
             ],
             ...
         ]
+
+    Stops getting moves from first "-" or "#" having move, which should mean that game ended.
     """
     with open(file_path) as f:
         pgn_text = f.read()
@@ -39,7 +41,7 @@ def get_real_game_chess_moves_history_from_pgn_file(file_path):
             #####################################
             # temporary fix to not load moves after one
             # that we do not support yet
-            if "=" in move or ("-" in move and move[0].isdigit()):
+            if "#" in move or ("-" in move and move[0].isdigit()):
                 break
 
             #####################################

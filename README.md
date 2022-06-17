@@ -19,6 +19,7 @@
 . remove breakpoints and unnecessary commented parts of code 
 . add good docs for each functions about their input/output and functionalities/roles
 . ability to play using 2 different computers on same network using IP sharing
+. add logging for different levels of info that can be controlled with just pytho logging module to have more idea about debug info if needed
 
 
 # how to run tests
@@ -28,6 +29,8 @@
 . for castling, moving king 2 places is enough, and even in chess notation
 if it is written that way and not O-O for example, it will load it and store as O-O move
 . currently no draws and stalemates are implemented in game logic, but can be implemented easily using existing functionality. So, you still need to know what you are doing do play chess here :)
+. pawn promotion notation ex: "E7 E8=Q" , "E7 F8=K" to make pawn Queen and Knight accordingly
+
 
 # errors ?
 . do colors show up properly? after installing some old package on my PC, it stopped

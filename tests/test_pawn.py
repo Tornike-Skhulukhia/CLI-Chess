@@ -107,9 +107,41 @@ class TestPawn(BaseTest):
 
         self._assert_was_not_successful_move("E5 F6")
 
-    def test_do_pawn_promotion(self):
-        pass
+    def test_can_do_pawn_promotion_with_queen(self):
+        # white promoted queen next to king
+        self.board.apply_chess_notation_moves(
+            [["b4", "c5"], ["bxc5", "a6"], ["c6", "a5"], ["c7", "a4"], ["cxd8=Q+"]]
+        )
 
+        # so it can not move other pieces because of check
+        self._assert_was_not_successful_move("h7 h6")
+        self._assert_was_not_successful_move("g8 f6")
+
+        # so king kills it itself
+        self._assert_was_successful_move("e8 d8")
+
+        # white makes random move
+        self._assert_was_successful_move("g1 F3")
+
+        # black makes random move which is allowed now
+        self._assert_was_successful_move("h7 h6")
+
+    def test_can_do_pawn_promotion_with_knight(self):
+        # white promoted queen next to king
+        self.board.apply_chess_notation_moves(
+            [["b4", "c5"], ["bxc5", "a6"], ["c6", "a5"], ["c7", "a4"], ["cxd8=N"]]
+        )
+
+        # black no check, as white promoted into Knight, do some random move
+        self._assert_was_successful_move("h7 h6")
+
+        # make sure new knight can not move like rook or bishop
+        self._assert_was_not_successful_move("d8 c8")
+        self._assert_was_not_successful_move("d8 b6")
+
+        # but can do like knight
+        self._assert_was_successful_move("d8 c6")
+    
 
 if __name__ == "__main__":
     unittest.main()

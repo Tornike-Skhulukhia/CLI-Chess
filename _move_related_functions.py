@@ -1,3 +1,11 @@
+import re
+
+PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO = "QBNR"
+PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION = (
+    PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "K"
+)
+
+
 def _is_chess_cell_coord(coord_str):
     """
     ex:
@@ -42,6 +50,13 @@ def _is_chess_basic_move_str(move):
 
     try:
         assert len(parts) == 2
+
+        assert parts[0] != parts[1]
+
+        # for pawn promotion, basic notation may be "E7 E8=Q" or "E7 F8=Q" or "E7 E8=K" ...
+        # so if we remove 1 letter from = and QNBR afterwards, it should remain valid cell coordinates
+        parts[1] = re.sub(f"=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]+", "", parts[1])
+
         return _is_chess_cell_coord(parts[0]) and _is_chess_cell_coord(parts[1])
     except Exception:
         return False
@@ -61,9 +76,23 @@ def _is_chess_notation_move_str(move):
         if move in ("O-O", "O-O-O"):
             return True
 
+        # remove pawn notation as it is not relevant here
+        # it may be at the beginning so notation itself will not be
+        # correct itself, but we do not care for now, these functions
+        # should get correctly formatted notations
+        move = re.sub(f"=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]+", "", move)
+
         assert " " not in move
 
-        assert all([i in "abcdefgh12345678xKQNBR+x" for i in move])
+        assert all(
+            [
+                i
+                in "abcdefgh12345678x"
+                + PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION
+                + "+x=#"
+                for i in move
+            ]
+        )
 
         # check can only be at the end
         if move.count("+") > 0:
@@ -89,11 +118,31 @@ def _is_chess_notation_move_str(move):
             assert move[-3].isdigit()
 
         # if piece prefix is here
-        if any([i for i in move if i in "KQNBR"]):
+        if any(
+            [
+                i
+                for i in move
+                if i
+                in PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION
+            ]
+        ):
             # it must be first letter
-            assert move[0] in "KQNBR"
+            assert (
+                move[0]
+                in PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION
+            )
             # and the only one
-            assert len([i for i in move if i in "KQNBR"]) == 1
+            assert (
+                len(
+                    [
+                        i
+                        for i in move
+                        if i
+                        in PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION
+                    ]
+                )
+                == 1
+            )
 
         return True
     except AssertionError:

@@ -1,15 +1,18 @@
 import abc
+import re
+
 from _move_related_functions import (
+    PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO,
     _bottom_coords,
     _bottom_left_coords,
     _bottom_right_coords,
+    _get_linearly_distant_cells_from_piece_position,
     _is_chess_cell_coord,
     _left_coords,
     _right_coords,
     _top_coords,
     _top_left_coords,
     _top_right_coords,
-    _get_linearly_distant_cells_from_piece_position,
 )
 
 
@@ -135,7 +138,7 @@ class Piece(metaclass=abc.ABCMeta):
             return_only_places_where_piece_can_directly_kill=True,
         )
         # except:
-        #     # breakpoint()
+        #     breakpoint()
 
         # pawns can only kill where they defend
         if self.piece_name == "pawn":
@@ -159,7 +162,16 @@ class Piece(metaclass=abc.ABCMeta):
         _possible_moves = self.get_technically_valid_moves_info_for_piece(board_state)
 
         possible_moves = [
-            i for i in _possible_moves if _is_chess_cell_coord(i["new_position"])
+            i
+            for i in _possible_moves
+            if _is_chess_cell_coord(i["new_position"])
+            or _is_chess_cell_coord(
+                re.sub(
+                    f"=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]+",
+                    "",
+                    i["new_position"],
+                )
+            )
         ]
 
         valid_possible_moves = []
@@ -195,6 +207,7 @@ class Piece(metaclass=abc.ABCMeta):
         when doing castle operation with king so we also handle that.
         """
 
+        # kill opponent if necessary
         if move_info["killed_opponent_piece_position"]:
             killed_opponent_piece = board_state.positions_to_pieces[
                 move_info["killed_opponent_piece_position"]
@@ -202,6 +215,7 @@ class Piece(metaclass=abc.ABCMeta):
 
             board_state.kill_piece(killed_opponent_piece)
 
+        # change current piece position
         self.position = move_info["new_position"]
 
         # also handle rooks in case of castling
@@ -214,6 +228,45 @@ class Piece(metaclass=abc.ABCMeta):
             rook = board_state.positions_to_pieces[_from]
             rook.position = _to
 
+        ### handle pawn promotion
+        if move_info.get("is_pawn_promotion_move"):
+            destination_cell, promoted_piece_letter = self.position.split("=")
+
+            # only pawn can promote to new piece
+            assert self.piece_name == "pawn"
+            # on rows 1 or 8 based on current player
+            assert destination_cell[1] in "18"
+            # our notation for this uses = (equal) sign
+            assert self.position[-2] == "="
+            # followed with letter of new piece
+            assert self.position[-1] in PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO
+
+            modified_pieces_list = board_state.current_player_pieces
+
+            # remove current pawn from board without adding to any killed pieces
+            # as it is just the promotion, not a kill
+            modified_pieces_list = [i for i in modified_pieces_list if i is not self]
+
+            new_piece_class = {"Q": Queen, "N": Knight, "B": Bishop, "R": Rook}[
+                promoted_piece_letter
+            ]
+
+            # create new piece and add in place of old piece
+            modified_pieces_list.append(
+                new_piece_class(
+                    color=self.color,
+                    position=destination_cell,
+                    player_number=self.player_number,
+                )
+            )
+
+            # save changed pieces
+            if self.player_number == 1:
+                board_state.player_1_pieces = modified_pieces_list
+            else:
+                board_state.player_2_pieces = modified_pieces_list
+
+        # change/swap active player number
         if swap_player_turn:
             board_state._swap_player_turn()
 
@@ -530,193 +583,312 @@ class Pawn(Piece):
         possible_moves_info = []
         defended_cells = []
 
-        # 1 up | no kill
-        top_cell = (
-            _top_coords(self.position)
-            if self.player_number == 1
-            else _bottom_coords(self.position)
-        )
+        try:
+            piece_position = self.position
+            curr_col, curr_row = self.position
+        except:
+            breakpoint()
 
-        if top_cell not in positions_to_pieces:
-            possible_moves_info.append(
-                {
-                    "new_position": top_cell,
-                    "killed_opponent_piece_position": None,
-                }
-            )
+        # if pawn moving forward means only to promote it
+        if (self.player_number == 1 and curr_row == "7") or (
+            self.player_number == 2 and curr_row == "2"
+        ):
+            # get top, top left and top right cells for both player cases
+            if self.player_number == 1:
+                # white piece
+                top_cell = _top_coords(piece_position)
+                top_left_cell = _top_left_coords(piece_position)
+                top_right_cell = _top_right_coords(piece_position)
+            else:
+                # black piece
+                top_cell = _bottom_coords(piece_position)
+                top_left_cell = _bottom_right_coords(piece_position)
+                top_right_cell = _bottom_left_coords(piece_position)
 
-            # 2 up | no kill
-            if self.moves_count == 0:
-                top_top_cell = (
-                    _top_coords(top_cell)
-                    if self.player_number == 1
-                    else _bottom_coords(top_cell)
-                )
+            # moving forward
+            if top_cell not in board_state.positions_to_pieces:
 
-                if top_top_cell not in positions_to_pieces:
+                for (
+                    piece_letter
+                ) in (
+                    PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO
+                ):  # Q-ueen, B-ishop, k-N-ight, R-ook
+                    # user must type pawn promotion using following
+                    # format to make it work - normal move + "=promoted_into_piece_letter"
+                    new_position_notation = f"{curr_col}8={piece_letter}"
+
                     possible_moves_info.append(
                         {
-                            "new_position": top_top_cell,
+                            "new_position": new_position_notation,
                             "killed_opponent_piece_position": None,
+                            "is_pawn_promotion_move": True,
                         }
                     )
 
-        # up left | kill
-        top_left = (
-            _top_left_coords(self.position)
-            if self.player_number == 1
-            else _bottom_right_coords(self.position)
-        )
+            # killing left
+            # no piece there
+            if top_left_cell not in board_state.positions_to_pieces:
 
-        if top_left in positions_to_pieces:
-            # opponent piece there
-            if positions_to_pieces[top_left].player_number != self.player_number:
+                for piece_letter in PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO:
+                    new_position_notation = f"{top_left_cell[0]}8={piece_letter}"
+
+                    possible_moves_info.append(
+                        {
+                            "new_position": new_position_notation,
+                            "killed_opponent_piece_position": None,
+                            "is_pawn_promotion_move": True,
+                        }
+                    )
+            else:
+                # there is some piece there
+                # it is opponent piece
+                if (
+                    board_state.positions_to_pieces[top_left_cell].player_number
+                    != self.player_number
+                ):
+
+                    for piece_letter in PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO:
+                        new_position_notation = f"{top_left_cell[0]}8={piece_letter}"
+
+                        possible_moves_info.append(
+                            {
+                                "new_position": new_position_notation,
+                                "killed_opponent_piece_position": top_left_cell,
+                                "is_pawn_promotion_move": True,
+                            }
+                        )
+                else:
+                    defended_cells.append(top_right_cell)
+
+            # killing right
+            # no piece there
+            if top_right_cell not in board_state.positions_to_pieces:
+
+                for piece_letter in PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO:
+                    new_position_notation = f"{top_right_cell[0]}8={piece_letter}"
+
+                    possible_moves_info.append(
+                        {
+                            "new_position": new_position_notation,
+                            "killed_opponent_piece_position": None,
+                            "is_pawn_promotion_move": True,
+                        }
+                    )
+            else:
+                # there is some piece there
+                # it is opponent piece
+                if (
+                    board_state.positions_to_pieces[top_right_cell].player_number
+                    != self.player_number
+                ):
+
+                    for piece_letter in PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO:
+                        new_position_notation = f"{top_right_cell[0]}8={piece_letter}"
+
+                        possible_moves_info.append(
+                            {
+                                "new_position": new_position_notation,
+                                "killed_opponent_piece_position": top_right_cell,
+                                "is_pawn_promotion_move": True,
+                            }
+                        )
+                else:
+                    defended_cells.append(top_right_cell)
+
+        else:
+            # non pawn promotion moves
+
+            # 1 up | no kill
+            top_cell = (
+                _top_coords(piece_position)
+                if self.player_number == 1
+                else _bottom_coords(piece_position)
+            )
+
+            if top_cell not in positions_to_pieces:
                 possible_moves_info.append(
                     {
-                        "new_position": top_left,
-                        "killed_opponent_piece_position": positions_to_pieces[
-                            top_left
-                        ].position,
+                        "new_position": top_cell,
+                        "killed_opponent_piece_position": None,
                     }
                 )
 
-            # our piece there
-            else:
-                defended_cells.append(top_left)
+                # 2 up | no kill
+                if self.moves_count == 0:
+                    top_top_cell = (
+                        _top_coords(top_cell)
+                        if self.player_number == 1
+                        else _bottom_coords(top_cell)
+                    )
 
-        # up right | kill
-        top_right = (
-            _top_right_coords(self.position)
-            if self.player_number == 1
-            else _bottom_left_coords(self.position)
-        )
+                    if top_top_cell not in positions_to_pieces:
+                        possible_moves_info.append(
+                            {
+                                "new_position": top_top_cell,
+                                "killed_opponent_piece_position": None,
+                            }
+                        )
 
-        if top_right in positions_to_pieces:
-            # opponent piece there
-            if positions_to_pieces[top_right].player_number != self.player_number:
-                # possible_moves_to_killed_pieces[top_right] = positions_to_pieces[
-                #     top_right
-                # ]
+            # up left | kill
+            top_left = (
+                _top_left_coords(piece_position)
+                if self.player_number == 1
+                else _bottom_right_coords(piece_position)
+            )
 
-                possible_moves_info.append(
-                    {
-                        "new_position": top_right,
-                        "killed_opponent_piece_position": positions_to_pieces[
-                            top_right
-                        ].position,
-                    }
-                )
-            # our piece there
-            else:
-                defended_cells.append(top_right)
+            if top_left in positions_to_pieces:
+                # opponent piece there
+                if positions_to_pieces[top_left].player_number != self.player_number:
+                    possible_moves_info.append(
+                        {
+                            "new_position": top_left,
+                            "killed_opponent_piece_position": positions_to_pieces[
+                                top_left
+                            ].position,
+                        }
+                    )
 
-        ### An passant
-        if board_state.total_moves_count > 0:
-            opponents_last_moves = []
+                # our piece there
+                else:
+                    defended_cells.append(top_left)
 
-            for two_player_moves in board_state.moves:
-                try:
-                    if board_state._player_turn == 1:
-                        opponents_last_moves.append(two_player_moves[1])
-                    else:
-                        opponents_last_moves.append(two_player_moves[0])
-                except IndexError:
-                    pass
+            # up right | kill
+            top_right = (
+                _top_right_coords(piece_position)
+                if self.player_number == 1
+                else _bottom_left_coords(piece_position)
+            )
 
-            opponents_last_move = opponents_last_moves[-1]
+            if top_right in positions_to_pieces:
+                # opponent piece there
+                if positions_to_pieces[top_right].player_number != self.player_number:
+                    # possible_moves_to_killed_pieces[top_right] = positions_to_pieces[
+                    #     top_right
+                    # ]
 
-            # for basic moves, we will hav space
-            if " " in opponents_last_move:
-                last_move_from, last_move_to = opponents_last_move.split()
-            else:
-                # for other moves we do not care about an pasants
-                last_move_from, last_move_to = "", ""
+                    possible_moves_info.append(
+                        {
+                            "new_position": top_right,
+                            "killed_opponent_piece_position": positions_to_pieces[
+                                top_right
+                            ].position,
+                        }
+                    )
+                # our piece there
+                else:
+                    defended_cells.append(top_right)
 
-        # check for white player
-        if self.player_number == 1:
-            # whites can do it only from 5-th row
-            if self.position[-1] == "5":
+            ### An passant
+            if board_state.total_moves_count > 0:
+                opponents_last_moves = []
 
-                # left an passant check
-                left_cell = _left_coords(self.position)
-                if last_move_to == left_cell:
+                for two_player_moves in board_state.moves:
+                    try:
+                        if board_state._player_turn == 1:
+                            opponents_last_moves.append(two_player_moves[1])
+                        else:
+                            opponents_last_moves.append(two_player_moves[0])
+                    except IndexError:
+                        pass
 
-                    if last_move_to in board_state.positions_to_pieces:
-                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+                opponents_last_move = opponents_last_moves[-1]
 
-                        if (
-                            last_moved_piece.piece_name == "pawn"
-                            and last_moved_piece.moves_count == 1
-                        ):
-                            possible_moves_info.append(
-                                {
-                                    "new_position": _top_coords(left_cell),
-                                    "killed_opponent_piece_position": left_cell,
-                                }
-                            )
+                # for basic moves, we will hav space
+                if " " in opponents_last_move:
+                    last_move_from, last_move_to = opponents_last_move.split()
+                else:
+                    # for other moves we do not care about an pasants
+                    last_move_from, last_move_to = "", ""
 
-                # right an passant check
-                right_cell = _right_coords(self.position)
-                if last_move_to == right_cell:
+            # check for white player
+            if self.player_number == 1:
+                # whites can do it only from 5-th row
+                if piece_position[-1] == "5":
 
-                    if last_move_to in board_state.positions_to_pieces:
+                    # left an passant check
+                    left_cell = _left_coords(piece_position)
+                    if last_move_to == left_cell:
 
-                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+                        if last_move_to in board_state.positions_to_pieces:
+                            last_moved_piece = board_state.positions_to_pieces[
+                                last_move_to
+                            ]
 
-                        if (
-                            last_moved_piece.piece_name == "pawn"
-                            and last_moved_piece.moves_count == 1
-                        ):
-                            possible_moves_info.append(
-                                {
-                                    "new_position": _top_coords(right_cell),
-                                    "killed_opponent_piece_position": right_cell,
-                                }
-                            )
+                            if (
+                                last_moved_piece.piece_name == "pawn"
+                                and last_moved_piece.moves_count == 1
+                            ):
+                                possible_moves_info.append(
+                                    {
+                                        "new_position": _top_coords(left_cell),
+                                        "killed_opponent_piece_position": left_cell,
+                                    }
+                                )
 
-        elif self.player_number == 2:
-            # blacks can do it only from 4-th row
-            if self.position[-1] == "4":
+                    # right an passant check
+                    right_cell = _right_coords(piece_position)
+                    if last_move_to == right_cell:
 
-                # left from whites perspective an passant check
-                left_cell = _left_coords(self.position)
-                if last_move_to == left_cell:
-                    if last_move_to in board_state.positions_to_pieces:
+                        if last_move_to in board_state.positions_to_pieces:
 
-                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+                            last_moved_piece = board_state.positions_to_pieces[
+                                last_move_to
+                            ]
 
-                        if (
-                            last_moved_piece.piece_name == "pawn"
-                            and last_moved_piece.moves_count == 1
-                        ):
-                            possible_moves_info.append(
-                                {
-                                    "new_position": _bottom_coords(left_cell),
-                                    "killed_opponent_piece_position": left_cell,
-                                }
-                            )
+                            if (
+                                last_moved_piece.piece_name == "pawn"
+                                and last_moved_piece.moves_count == 1
+                            ):
+                                possible_moves_info.append(
+                                    {
+                                        "new_position": _top_coords(right_cell),
+                                        "killed_opponent_piece_position": right_cell,
+                                    }
+                                )
 
-                # right from whites perspective an passant check
-                right_cell = _right_coords(self.position)
-                if last_move_to == right_cell:
+            elif self.player_number == 2:
+                # blacks can do it only from 4-th row
+                if piece_position[-1] == "4":
 
-                    if last_move_to in board_state.positions_to_pieces:
-                        last_moved_piece = board_state.positions_to_pieces[last_move_to]
+                    # left from whites perspective an passant check
+                    left_cell = _left_coords(piece_position)
+                    if last_move_to == left_cell:
+                        if last_move_to in board_state.positions_to_pieces:
 
-                        if (
-                            last_moved_piece.piece_name == "pawn"
-                            and last_moved_piece.moves_count == 1
-                        ):
-                            possible_moves_info.append(
-                                {
-                                    "new_position": _bottom_coords(right_cell),
-                                    "killed_opponent_piece_position": right_cell,
-                                }
-                            )
+                            last_moved_piece = board_state.positions_to_pieces[
+                                last_move_to
+                            ]
 
-        ### TO-BE-IMPLEMENTED
-        # exchange pawn to queen if at the end of opposite side
-        ### end TO-BE-IMPLEMENTED
+                            if (
+                                last_moved_piece.piece_name == "pawn"
+                                and last_moved_piece.moves_count == 1
+                            ):
+                                possible_moves_info.append(
+                                    {
+                                        "new_position": _bottom_coords(left_cell),
+                                        "killed_opponent_piece_position": left_cell,
+                                    }
+                                )
+
+                    # right from whites perspective an passant check
+                    right_cell = _right_coords(piece_position)
+                    if last_move_to == right_cell:
+
+                        if last_move_to in board_state.positions_to_pieces:
+                            last_moved_piece = board_state.positions_to_pieces[
+                                last_move_to
+                            ]
+
+                            if (
+                                last_moved_piece.piece_name == "pawn"
+                                and last_moved_piece.moves_count == 1
+                            ):
+                                possible_moves_info.append(
+                                    {
+                                        "new_position": _bottom_coords(right_cell),
+                                        "killed_opponent_piece_position": right_cell,
+                                    }
+                                )
 
         if return_defended_cells:
             return defended_cells, possible_moves_info

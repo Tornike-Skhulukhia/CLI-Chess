@@ -1,4 +1,10 @@
-from _move_related_functions import _is_chess_basic_move_str
+import re
+
+from _move_related_functions import (
+    _is_chess_basic_move_str,
+    PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO,
+    PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION,
+)
 
 
 def convert_basic_move_notation_to_chess_notation(
@@ -14,8 +20,6 @@ def convert_basic_move_notation_to_chess_notation(
     if basic_move_str in ("O-O", "O-O-O"):
         return basic_move_str
 
-    from_cell, to_cell = basic_move_str.upper().split()
-
     # ex: N, Q, K, ""
     (
         move_info,
@@ -28,7 +32,18 @@ def convert_basic_move_notation_to_chess_notation(
     except:
         breakpoint()
 
-    moving_piece_col, moving_piece_row = moving_piece.position
+    from_cell, to_cell = basic_move_str.upper().split()
+
+    if basic_move_str[-2] == "=":
+        # pawn promotion case
+        moving_piece_col, moving_piece_row = moving_piece.position[:2]
+        pawn_promotion_suffix = basic_move_str[-2:]
+
+    else:
+        # normal case
+        moving_piece_col, moving_piece_row = moving_piece.position
+        pawn_promotion_suffix = ""
+
     piece_name_prefix = moving_piece.chess_notation_prefix
 
     # kill | x   # inacurate for an pasaunt ?
@@ -100,7 +115,17 @@ def convert_basic_move_notation_to_chess_notation(
             # (even though not always necessary to know from which piece it was killed)
             clarification_prefix = moving_piece_col.lower()
 
-    return f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}{checkmate_suffix}"
+    # in to_cell we may have like E8=Q, and =Q we also have in pawn_promotion_suffix, so drop it here
+    to_cell = to_cell.replace(pawn_promotion_suffix, "")
+
+    res = f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{pawn_promotion_suffix}{check_suffix}{checkmate_suffix}"
+
+    # print(f"returning {res} for {basic_move_str}")
+
+    # if basic_move_str == "C7 D8=Q":
+    #     breakpoint()
+
+    return res
 
 
 def convert_chess_notation_to_basic_move_notation(
@@ -110,6 +135,7 @@ def convert_chess_notation_to_basic_move_notation(
     Ex:
         "Nf3" --> "G1 F3"
     """
+
     # special case - short or long castle
     if chess_notation in ("O-O", "O-O-O"):
         return chess_notation
@@ -118,11 +144,23 @@ def convert_chess_notation_to_basic_move_notation(
 
     # kills and checks signs do not change move at all
     chess_notation = chess_notation.replace("+", "").replace("x", "").replace("#", "")
-    move_to = chess_notation[-2:].upper()
     move_from_str = chess_notation[:-2]
 
+    # handle pawn promotions
+    # ex: "d8=Q+"  should become "C7 D8=Q+"  after end of this function
+    if re.search("=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]", chess_notation):
+        # pawn promotion case
+        move_to = chess_notation[-4:].upper()
+    else:
+        # normal case
+        move_to = chess_notation[-2:].upper()
+
     # what piece is moving?
-    if move_from_str and move_from_str[0] in "RNBQK":
+    if (
+        move_from_str
+        and move_from_str[0]
+        in PIECES_LETTERS_THAT_NEED_THEIR_LETTER_UPPERCASED_IN_CHESS_NOTATION
+    ):
         # for pieces other than pawn
         piece_letter = move_from_str[0]
         move_from_str = move_from_str[1:]
@@ -146,6 +184,7 @@ def convert_chess_notation_to_basic_move_notation(
     ]
 
     if len(pieces_that_can_move_there) == 0:
+        breakpoint()
         raise ValueError(
             f"Move {chess_notation_bak} does not seem valid/possible on current board"
         )

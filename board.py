@@ -1,15 +1,7 @@
-"""
-Not implemented:
-    . king castling | +
-    . an passant    | +
-    . exchanging pawn to queen or other pieces when in the end...
-Known Bugs
-    . 
-"""
-
-
 import copy
 import os
+
+
 
 from rich import print
 
@@ -106,7 +98,10 @@ class Board:
 
         for moves in moves_list:
             for move in moves:
-                assert _is_chess_notation_move_str(move)
+                try:
+                    assert _is_chess_notation_move_str(move)
+                except AssertionError:
+                    raise ValueError(f"Move {move} does not seem valid")
 
                 basic_move_str = convert_chess_notation_to_basic_move_notation(
                     move, self
@@ -285,12 +280,6 @@ class Board:
         if copied_board_state._current_player_has_active_check:
             return None
 
-        # if (
-        #     self.positions_to_pieces.get("B4")
-        #     and self.positions_to_pieces.get("B4").piece_name == "bishop"
-        # ):
-        #     breakpoint()
-
         king_position_if_castled = {
             "short": {
                 1: "G1",
@@ -356,7 +345,6 @@ class Board:
         # if it seems castling case, save moves info as castling notation, not the basic from-to cells notation
         if move_info and move_info.get("castle_notation"):
             basic_move_str = move_info["castle_notation"]
-
         else:
             basic_move_str = f"{last_move_from} {last_move_to}"
 
@@ -502,12 +490,6 @@ class Board:
         print(f"{self.moves=}")
         print(f"{self.chess_notation_moves=}")
         print()
-
-        # later rewrite this function, so that we generate some data structure
-        # that stores info about what to print and in what color and when,
-        # so that applying different styles after basic moves, will be much easier
-
-        # breakpoint()
 
         for row_index in range(8):
             # row number
@@ -699,7 +681,6 @@ class Board:
 
         # run it before making actual changes as current notations translations implementation
         # needs board state info before making actual move on board itself
-        
 
         # as conversions that happen, make decisions based on current board state, not after move
         self.update_moves_history(

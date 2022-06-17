@@ -43,16 +43,22 @@ moves = [
 
 
 moves = [
-    ["e4", "e5"],
-    ["Bc4", "Nc6"],
-    ["Qf3", "d6"],
-    # ["Qxf7+"],
+    ["b4", "c5"],
+    ["bxc5", "a6"],
+    ["c6", "a5"],
+    ["c7", "a4"],
+    ["cxd8=N"],
 ]
 
 
 # moves = []
 
 game.board.apply_chess_notation_moves(moves)
+board = game.board
+
+print(board)
+
+board.make_a_move_if_possible("c7 d8=Q")
 
 # breakpoint()
 
