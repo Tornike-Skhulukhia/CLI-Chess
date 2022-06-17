@@ -138,7 +138,12 @@ def convert_chess_notation_to_basic_move_notation(
         in [i["new_position"] for i in i.get_possible_moves(board_state_before_move)]
     ]
 
-    if len(pieces_that_can_move_there) == 1:
+    if len(pieces_that_can_move_there) == 0:
+        raise ValueError(
+            f"Move {chess_notation_bak} does not seem valid/possible on current board"
+        )
+
+    elif len(pieces_that_can_move_there) == 1:
         # for pawn we may have unnecessary more info here
 
         move_from = pieces_that_can_move_there[0].position

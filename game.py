@@ -49,6 +49,8 @@ class Game:
         """
         self._game_status = "initial"
 
+    def __repr__(self):
+        print(f"Game with board\n {self.board}")
 
     def play(self):
         print("Game Started")

@@ -1,7 +1,7 @@
 import unittest
 
-from base import BaseTest
-from real_game_info_retrieval_functions import (
+from tests.base import BaseTest
+from tests.real_game_info_retrieval_functions import (
     get_real_game_chess_moves_history_from_pgn_file,
 )
 from board import Board
@@ -55,6 +55,19 @@ class TestBoard(BaseTest):
 
         self.assertEqual(self.board._player_turn, 1)
 
+    def test_check_identified_correctly(self):
+        games_moves = [
+            [
+                ["e4", "d5"],
+                ["Bb5+"],
+            ]
+        ]
+
+        for game_moves in games_moves:
+            board = Board()
+            board.apply_chess_notation_moves(game_moves)
+            self.assertTrue(board._current_player_has_active_check)
+
     def test_can_load_games_from_chess_notations_list_without_errors(self):
         games_moves = get_real_game_chess_moves_history_from_pgn_file(
             "./tests/assets/master_games.pgn"
@@ -67,6 +80,11 @@ class TestBoard(BaseTest):
             # that it is correct/valid, and raise exception if not,
             # so if no errors raised, it is a good sign
             board.apply_chess_notation_moves(game_moves)
+
+            break  # remove break in last steps
+
+    def test_correctly_identifies_checkmates(self):
+        self.board.apply_chess_notation_moves([])
 
 
 if __name__ == "__main__":

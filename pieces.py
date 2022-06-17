@@ -135,10 +135,17 @@ class Piece(metaclass=abc.ABCMeta):
             return_only_places_where_piece_can_directly_kill=True,
         )
         # except:
-        #     breakpoint()
+        #     # breakpoint()
 
         # pawns can only kill where they defend
         if self.piece_name == "pawn":
+            defended_cells.extend(
+                [
+                    i["new_position"]
+                    for i in moves_info
+                    if i["killed_opponent_piece_position"]
+                ]
+            )
             return defended_cells
 
         defended_cells.extend([i["new_position"] for i in moves_info])

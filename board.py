@@ -1,9 +1,9 @@
 """
 Not implemented:
     . king castling | +
-    . an passant
+    . an passant    | +
     . exchanging pawn to queen or other pieces when in the end...
-Bugs
+Known Bugs
     . 
 """
 
@@ -140,26 +140,14 @@ class Board:
                     move, self
                 )
 
-                (
-                    move_info,
-                    piece,
-                    _from,
-                    _to,
-                ) = self.get_move_info_if_it_is_valid_move_str(basic_move_str)
+                move_was_successfull, move_errors = self.make_a_move_if_possible(
+                    basic_move_str
+                )
 
-                if not move_info:
+                if not move_was_successfull:
                     raise ValueError(
-                        f"Move {move} is not possible on current board configuration"
+                        f"Can not apply move {move} ({basic_move_str}) to board"
                     )
-
-                self.update_moves_history(
-                    last_move_from=_from, last_move_to=_to, move_info=move_info
-                )
-
-                piece.apply_move_info_to_board(
-                    board_state=self,
-                    move_info=move_info,
-                )
 
     def get_deepcopy(self):
         return copy.deepcopy(self)
@@ -253,16 +241,7 @@ class Board:
 
     @property
     def _current_player_has_active_check(self):
-        # get this info from chess based notation
-
         return self._player_has_check_in_position()
-
-        # last_moves = [j for i in self.chess_notation_moves[-2:] for j in i]
-
-        # if len(last_moves) == 0:
-        #     return False
-
-        # return last_moves[-1].endswith("+")
 
     def _get_player_king_info_if_possible_to_do_castling_with_it(
         self, castling_case="short"
@@ -706,6 +685,8 @@ class Board:
         move_info, piece, _from, _to = self.get_move_info_if_it_is_valid_move_str(
             move_str
         )
+
+        # print(f"{move_info=}{piece=}{_from=}{_to=}")
 
         if not move_info:
             return False, [INVALID_MOVE_ERROR_TEXT]

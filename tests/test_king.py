@@ -1,6 +1,6 @@
 import unittest
 
-from base import BaseTest
+from tests.base import BaseTest
 
 
 class TestKing(BaseTest):
@@ -69,6 +69,43 @@ class TestKing(BaseTest):
 
         # castle should works
         self._assert_was_successful_move("O-O-O")
+
+    def test_king_can_not_move_where_there_is_check(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["f4", "f5"],
+                ["Kf2", "Kf7"],
+                ["Kg3", "Kg6"],
+            ]
+        )
+
+        self._assert_was_not_successful_move("g3 g4")
+        self._assert_was_successful_move("g3 f2")
+
+    def test_can_not_move_closer_than_one_cell_in_between_opponent_king(self):
+        self.board.apply_chess_notation_moves(
+            [
+                ["f4", "f5"],
+                ["Kf2", "Kf7"],
+                ["Kg3", "Kg6"],
+                [
+                    "Kh4",
+                ],
+            ]
+        )
+
+        # black can not move to too close to white
+        self._assert_was_not_successful_move("g6 g5")
+        self._assert_was_not_successful_move("g6 h5")
+
+        # but can move on other places
+        self._assert_was_successful_move("g6 h6")
+
+        # white also can not move to black king
+        self._assert_was_not_successful_move("h4 h5")
+
+        # but can move down
+        self._assert_was_successful_move("h4 h3")
 
 
 if __name__ == "__main__":

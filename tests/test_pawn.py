@@ -1,6 +1,6 @@
 import unittest
 
-from base import BaseTest
+from tests.base import BaseTest
 
 
 class TestPawn(BaseTest):

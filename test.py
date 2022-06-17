@@ -43,17 +43,18 @@ moves = [
 
 
 moves = [
-    # ["d3", "d5"],
-    # ["Bf4", "Bg4"],
-    # ["Nc3", "Nf6"],
-    # ["Qd2", "e6"],
-    # ["e3", "Bb4"],
+    # ["e4", "e5"],
+    # ["Bc4", "Nc6"],
+    # ["Qf3", "d6"],
+    # ["Qxf7+"],
 ]
 
 
 # moves = []
 
 game.board.apply_chess_notation_moves(moves)
+
+# breakpoint()
 
 # make sure state is recovered and no errors appeared during it
 # this will make sure that lots of functions work correctly in real game
