@@ -2,7 +2,6 @@ import copy
 import os
 
 
-
 from rich import print
 
 from _move_related_functions import (
@@ -98,6 +97,10 @@ class Board:
 
         for moves in moves_list:
             for move in moves:
+                # as when loading game this way, we do not show errors, lets
+                # clear them at the beginning and if at the end something still remains
+                # draw method will use them
+
                 try:
                     assert _is_chess_notation_move_str(move)
                 except AssertionError:
@@ -106,6 +109,11 @@ class Board:
                 basic_move_str = convert_chess_notation_to_basic_move_notation(
                     move, self
                 )
+
+                # reset errors to not see lots of them when not required
+                # this way, for example, when loading only last check can be visible
+                # not the checks few moves ago
+                self._reset_errors()
 
                 (
                     move_was_successfull,
@@ -118,10 +126,16 @@ class Board:
                         f"Can not apply move {move} ({basic_move_str}) to board"
                     )
 
+                # lets also show errors here when loading game(it is fast draft implementation,
+                # so depoending on future needs, we may use separate functions)
+
                 if next_player_troubles["player_is_checkmated"]:
-                    raise ValueError(
-                        "Game is over, please use this function to load games that are not finished"
-                    )
+                    self._add_temporary_error("Game Over, Checkmate!")
+                    return
+
+                elif next_player_troubles["player_is_checked"]:
+                    print("Checked on move", move)
+                    self._add_temporary_error("Check!")
 
     def get_deepcopy(self):
         return copy.deepcopy(self)
@@ -548,6 +562,7 @@ class Board:
                         )
 
             # display errors if any
+
             if 2 <= row_index <= 6 and len(self.errors_to_display) > 0:
                 error_text = self.errors_to_display.pop()
 

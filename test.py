@@ -32,39 +32,25 @@ moves = [
     ["e5", "Qxe5"],
     ["Bxb7", "Ra7"],
     ["Qg4", "Nf6"],
-    ["Qxd4", "Rxb7"],
-    ["Qxd6", "Qxb2"],
-    ["Rd2", "Qc3"],
-    ["Nd1", "Re8"],
-    ["Rxe8+", "Nxe8"],
+    # ["Qxd4", "Rxb7"],
+    # ["Qxd6", "Qxb2"],
+    # ["Rd2", "Qc3"],
+    # ["Nd1", "Re8"],
+    # ["Rxe8+", "Nxe8"],
     # ["Nxc3", "1-0"],
 ]
 # [:6]
 
 
-moves = [
-    ["b4", "c5"],
-    ["bxc5", "a6"],
-    ["c6", "a5"],
-    ["c7", "a4"],
-    ["cxd8=N"],
-]
+# moves = [
+#     ["b4", "c5"],
+#     ["bxc5", "a6"],
+#     ["c6", "a5"],
+#     ["c7", "a4"],
+#     ["cxd8=B+"],
+# ]
 
-
-# moves = []
 
 game.board.apply_chess_notation_moves(moves)
-board = game.board
 
-print(board)
-
-board.make_a_move_if_possible("c7 d8=Q")
-
-# breakpoint()
-
-# make sure state is recovered and no errors appeared during it
-# this will make sure that lots of functions work correctly in real game
-
-
-###############
 game.play()
