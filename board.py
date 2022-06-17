@@ -134,7 +134,6 @@ class Board:
                     return
 
                 elif next_player_troubles["player_is_checked"]:
-                    print("Checked on move", move)
                     self._add_temporary_error("Check!")
 
     def get_deepcopy(self):

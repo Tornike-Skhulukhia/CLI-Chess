@@ -42,14 +42,6 @@ moves = [
 # [:6]
 
 
-# moves = [
-#     ["b4", "c5"],
-#     ["bxc5", "a6"],
-#     ["c6", "a5"],
-#     ["c7", "a4"],
-#     ["cxd8=B+"],
-# ]
-
 
 game.board.apply_chess_notation_moves(moves)
 
