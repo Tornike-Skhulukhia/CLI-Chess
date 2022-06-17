@@ -45,7 +45,14 @@ def convert_basic_move_notation_to_chess_notation(
         move_info=move_info,
     )
 
-    check_suffix = "+" if board_after_move._player_has_check_in_position() else ""
+    # check & checkmate signs
+    opponent_troubles_after_move = board_after_move.get_current_player_troubles()
+    check_suffix, checkmate_suffix = "", ""
+
+    if opponent_troubles_after_move.get("player_is_checkmated"):
+        checkmate_suffix = "#"
+    elif opponent_troubles_after_move.get("player_is_checked"):
+        check_suffix = "+"
 
     ### if there are more than 1 same type of pieces
     ### that can move to new position
@@ -93,7 +100,7 @@ def convert_basic_move_notation_to_chess_notation(
             # (even though not always necessary to know from which piece it was killed)
             clarification_prefix = moving_piece_col.lower()
 
-    return f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}"
+    return f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{check_suffix}{checkmate_suffix}"
 
 
 def convert_chess_notation_to_basic_move_notation(
@@ -110,7 +117,7 @@ def convert_chess_notation_to_basic_move_notation(
     chess_notation_bak = chess_notation
 
     # kills and checks signs do not change move at all
-    chess_notation = chess_notation.replace("+", "").replace("x", "")
+    chess_notation = chess_notation.replace("+", "").replace("x", "").replace("#", "")
     move_to = chess_notation[-2:].upper()
     move_from_str = chess_notation[:-2]
 
