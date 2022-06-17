@@ -56,17 +56,39 @@ class TestBoard(BaseTest):
         self.assertEqual(self.board._player_turn, 1)
 
     def test_check_identified_correctly(self):
-        games_moves = [
-            [
-                ["e4", "d5"],
-                ["Bb5+"],
-            ]
-        ]
 
-        for game_moves in games_moves:
-            board = Board()
-            board.apply_chess_notation_moves(game_moves)
-            self.assertTrue(board._current_player_has_active_check)
+        self.board.apply_chess_notation_moves([["e4", "d5", "Bb5"]])
+
+        # there is a check
+        self.assertTrue(self.board._current_player_has_active_check)
+        # player can not do anything that is not fixing check
+        self._assert_was_not_successful_move("G8 F6")
+        self._assert_was_not_successful_move("D8 D6")
+
+        # stop check using knight
+        self._assert_was_successful_move("B8 C6")
+
+        # white has no checks
+        self.assertFalse(self.board._current_player_has_active_check)
+        # and does some random move
+        self._assert_was_successful_move("B1 C3")
+
+        # black still has no check
+        self.assertFalse(self.board._current_player_has_active_check)
+        # black also does some random move
+        self._assert_was_successful_move("A8 B8")
+
+        # white kills previous black knight and makes check again
+        self._assert_was_successful_move("B5 C6")
+
+        # black has check again
+        self.assertTrue(self.board._current_player_has_active_check)
+
+        # and can not move king in also checked position
+        self._assert_was_not_successful_move("E8 D7")
+
+        # but can use bishop to hide check
+        self._assert_was_successful_move("C8 D7")
 
     def test_can_load_games_from_chess_notations_list_without_errors(self):
         games_moves = get_real_game_chess_moves_history_from_pgn_file(
@@ -84,7 +106,26 @@ class TestBoard(BaseTest):
             break  # remove break in last steps
 
     def test_correctly_identifies_checkmates(self):
-        self.board.apply_chess_notation_moves([])
+        self.board.apply_chess_notation_moves(
+            [
+                ["e4", "e5"],
+                ["Bc4", "Nc6"],
+                ["Qf3", "d6"],
+            ]
+        )
+
+        success, errors, next_player_troubles = self.board.make_a_move_if_possible(
+            "F3 F7",
+        )
+
+        # move was sucessfull
+        self.assertTrue(success)
+        # no errors
+        self.assertTrue(len(errors) == 0)
+        # troubles is not empty
+        self.assertTrue(bool(next_player_troubles))
+        # but it has checkmate information correctly
+        self.assertTrue(next_player_troubles["player_is_checkmated"])
 
 
 if __name__ == "__main__":

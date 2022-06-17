@@ -83,70 +83,49 @@ class Board:
 
     def apply_chess_notation_moves(self, moves_list):
         """
-        # ! test on more real games and add support for 1-0 and 0-1 and 1/2 identification
-        to automatically stop and not cause errors...
 
-
-               Get list of moves written in chess notation like this:
-
-        # link for this specific game example - https://www.chess.com/games/view/15792867
-
-        [
-            ['d4', 'Nf6'],
-            ['c4', 'e6'],
-            ['Nf3', 'b6'],
-            ['g3', 'Bb7'],
-            ['Bg2', 'Bb4+'],
-            ['Bd2', 'c5'],
-            ['Bxb4', 'cxb4'],
-            ['O-O', 'O-O'],
-            ['Nbd2', 'a5'],
-            ['Re1', 'd6'],
-            ['e4', 'Nfd7'],
-            ['Qe2', 'e5'],
-            ['Rad1', 'Nc6'],
-            ['Nf1', 'Qf6'],
-            ['Ne3', 'Nxd4'],
-            ['Nxd4', 'exd4'],
-            ['e5', 'Qxe5'],
-            ['Bxb7', 'Ra7'],
-            ['Qg4', 'Nf6'],
-            ['Qxd4', 'Rxb7'],
-            ['Qxd6', 'Qxb2'],
-            ['Rd2', 'Qc3'],
-            ['Nd1', 'Re8'],
-            ['Rxe8+', 'Nxe8'],
-            ['Nxc3', '1-0']
-        ]
-
-        apply these moves to our board and return the resulting board configuration object.
+        Get list of moves written in chess notation like this:
+            [
+                ['d4', 'Nf6'],
+                ['c4', 'e6'],
+                ['Nf3', 'b6'],
+                ['g3', 'Bb7'],
+                ['Bg2', 'Bb4+'],
+                ['Bd2', 'c5'],
+            ]
+        and apply them to current board configuration if possible (ex: https://www.chess.com/games/view/15792867)
 
         currently checks and other warnings/errors are not rendered at all, but validations are still in place,
         so for example if last position after these moves causes check, player will not be able to play
         something that does not stop king from checking, so just the errors are not visible(we may change that if needed)
         """
+
         if len(moves_list) > 0:
             if not isinstance(moves_list[0], list):
                 raise ValueError("Invalid input, please use lists of lists")
 
         for moves in moves_list:
             for move in moves:
-                try:
-                    assert _is_chess_notation_move_str(move)
-                except:
-                    breakpoint()
+                assert _is_chess_notation_move_str(move)
 
                 basic_move_str = convert_chess_notation_to_basic_move_notation(
                     move, self
                 )
 
-                move_was_successfull, move_errors = self.make_a_move_if_possible(
-                    basic_move_str
-                )
+                (
+                    move_was_successfull,
+                    move_errors,
+                    next_player_troubles,
+                ) = self.make_a_move_if_possible(basic_move_str)
 
                 if not move_was_successfull:
                     raise ValueError(
                         f"Can not apply move {move} ({basic_move_str}) to board"
+                    )
+
+                if next_player_troubles["player_is_checkmated"]:
+                    raise ValueError(
+                        "Game is over, please use this function to load games that are not finished"
                     )
 
     def get_deepcopy(self):
@@ -674,25 +653,54 @@ class Board:
 
     def make_a_move_if_possible(self, move_str):
         """
-        main entry point from game.
+        Main entry point from game, gets move string, if possible applies new move to board,
+        otherwise, returns errors.
 
-        Get raw move string input from user and if it seems valid,
-        apply the move and return False, if not, return False and errors
-        that this move had, like incorrect move format, correct format but invalid move e.t.c
+        args:
+            1. move_str - string like "E2 E4", "B1 C3". It is written in basic notation
+                        with "from_cell to_cell" format, as it is making lots of things much
+                        clear to work with and we use mainly this notation in code, but also
+                        have function that converts chess notation like "e4", "NC3" to basic
+                        notation, which allows use to load games from pgn files using
+                        apply_chess_notation_moves method here. Please look at it if needed.
+
+        Returns tuple of 3 things:
+                1. success flag - success status of move (True/False)
+
+                2. list of errors - if move was not successfull, possible error can
+                                be invalid move as a string. we use this error texts to
+                                display in CLI. They can be more detailed, like specifically why
+                                is move not legal, because of checks, piece can not move
+                                that way, move string has incorrect format or something else,
+                                but for our purposes this granularity is not necessary for now.
+
+                3. next player troubles - dictionary containing information if after successfull
+                                move(which causes next one to be the active player on board) player has
+                                active checks, or checkmates, so that outer calling functions can finish
+                                game, display that there is a check e.t.c
+                                For example, lets say this function processed valid move from white
+                                player that caused checkmate to black player, in that case
+                                1-st argument of this function will be True, second will be [],
+                                and third(this one) will be the dictionary with few keys like
+                                player_is_checked or player_is_checkmated with boolean values,
+                                for more info see get_current_player_troubles method.
+
+                                If move is not successfull, this dictionary is empty, as it makes
+                                no sense to check for checks/checkmates again if move was not valid,
+                                so not applied to board.
+
         """
-        move_str = move_str.upper()
-
         move_info, piece, _from, _to = self.get_move_info_if_it_is_valid_move_str(
             move_str
         )
 
-        # print(f"{move_info=}{piece=}{_from=}{_to=}")
-
         if not move_info:
-            return False, [INVALID_MOVE_ERROR_TEXT]
+            return False, [INVALID_MOVE_ERROR_TEXT], {}
 
         # run it before making actual changes as current notations translations implementation
         # needs board state info before making actual move on board itself
+        
+
         # as conversions that happen, make decisions based on current board state, not after move
         self.update_moves_history(
             last_move_from=_from, last_move_to=_to, move_info=move_info
@@ -703,7 +711,12 @@ class Board:
             move_info=move_info,
         )
 
-        return True, []
+        # after each move, check if opponent has checkmate or check
+        # and return this info here for easier access
+        # here we have next player as after previous moves, player turn was switched
+        next_player_troubles = self.get_current_player_troubles()
+
+        return True, [], next_player_troubles
 
     def get_current_player_troubles(self):
         return_me = {

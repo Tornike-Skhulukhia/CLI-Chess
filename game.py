@@ -41,12 +41,6 @@ class Game:
             previous_move_cell_color=previous_move_cell_color,
         )
 
-        """
-        Statuses:
-            . initial - ready to get user inputs
-            . running - game is running
-            . finished - game is lost/exited
-        """
         self._game_status = "initial"
 
     def __repr__(self):
@@ -63,9 +57,11 @@ class Game:
             # draw new board
             self.board.draw(debug_mode=DEBUG_MODE)
 
-            move_was_successfull, move_errors = self.board.make_a_move_if_possible(
-                input()
-            )
+            (
+                move_was_successfull,
+                move_errors,
+                next_player_troubles,
+            ) = self.board.make_a_move_if_possible(input())
 
             # make sure it seems valid chess move
             if not move_was_successfull:
@@ -76,11 +72,8 @@ class Game:
 
                 continue
 
-            # after our move, does opponent has check/checkmate?
-            troubles = self.board.get_current_player_troubles()
-
-            if troubles["player_is_checked"]:
-                if troubles["player_is_checkmated"]:
+            if next_player_troubles["player_is_checked"]:
+                if next_player_troubles["player_is_checkmated"]:
                     # game over, current player lose
                     self.board._add_temporary_error("You lost the game!")
 
@@ -88,7 +81,7 @@ class Game:
 
                     self.board.draw(debug_mode=DEBUG_MODE)
                 else:
-                    info = troubles["move_that_makes_check_disappear"]
+                    info = next_player_troubles["move_that_makes_check_disappear"]
 
                     self.board._add_temporary_error(
                         f'possible move out of check : {info["piece"]} to {info["new_position"]}'

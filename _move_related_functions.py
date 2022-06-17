@@ -27,8 +27,13 @@ def _is_chess_basic_move_str(move):
     Just validate that move has proper format, not any logic yet
 
     Format:
-        "E2 E4" - case sensitive
+        "E2 E4" - case insensitive
     """
+    if not isinstance(move, str):
+        return False
+
+    move = move.upper()
+
     # special cases for castling
     if move in ("O-O", "O-O-O"):
         return True
@@ -65,7 +70,6 @@ def _is_chess_notation_move_str(move):
             assert move.endswith("+")
             move = move[:-1]
 
-
         # kills
         if move.count("x") > 0:
             # max 1 kill sign
@@ -83,7 +87,6 @@ def _is_chess_notation_move_str(move):
 
         if digits_count == 2:
             assert move[-3].isdigit()
-
 
         # if piece prefix is here
         if any([i for i in move if i in "KQNBR"]):

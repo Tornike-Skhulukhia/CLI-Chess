@@ -14,7 +14,9 @@ class BaseTest(unittest.TestCase):
             self.assertTrue(_from in self.board.positions_to_pieces)
 
             # make a move
-            success, errors = self.board.make_a_move_if_possible(move)
+            success, errors, next_player_troubles = self.board.make_a_move_if_possible(
+                move
+            )
 
             self.assertTrue(success)
             self.assertTrue(len(errors) == 0)
@@ -24,13 +26,15 @@ class BaseTest(unittest.TestCase):
             self.assertTrue(_from not in self.board.positions_to_pieces)
         else:
             # castling
-            success, errors = self.board.make_a_move_if_possible(move)
+            success, errors, next_player_troubles = self.board.make_a_move_if_possible(
+                move
+            )
 
             self.assertTrue(success)
             self.assertTrue(len(errors) == 0)
 
     def _assert_was_not_successful_move(self, move):
-        success, errors = self.board.make_a_move_if_possible(move)
+        success, errors, next_player_troubles = self.board.make_a_move_if_possible(move)
 
         self.assertFalse(success)
         self.assertTrue(len(errors) == 1)
