@@ -46,7 +46,7 @@ class Game:
     def __repr__(self):
         print(f"Game with board\n {self.board}")
 
-    def add_current_player_trouble_messages_if_needed(self):
+    def add_current_player_trouble_messages_if_needed(self, **args):
 
         # if we have any trouble, show it to us
         current_player_troubles = self.board.get_current_player_troubles()
@@ -55,7 +55,7 @@ class Game:
             if current_player_troubles["player_is_checkmated"]:
                 # game over, current player lost
                 self.board._add_temporary_error("What a nice checkmate!")
-
+                self.board.draw(**args)
                 exit()
             else:
                 info = current_player_troubles["move_that_makes_check_disappear"]
@@ -70,14 +70,17 @@ class Game:
     def play(self, connection):
         print("Game Started")
 
+        args = dict(
+            rotate_180_deg=self.player_number == 2,
+            debug_mode=DEBUG_MODE,
+        )
+
         # start game and maintain it before necessary
         while True:
-            self.add_current_player_trouble_messages_if_needed()
+            self.add_current_player_trouble_messages_if_needed(**args)
 
             # draw new board  | rotate only for player 2
-            self.board.draw(
-                rotate_180_deg=self.player_number == 2, debug_mode=DEBUG_MODE
-            )
+            self.board.draw(**args)
 
             if self.board._player_turn == self.player_number:
 
