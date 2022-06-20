@@ -22,6 +22,9 @@
 . add logging for different levels of info that can be controlled with just pytho logging module to have more idea about debug info if needed
 . maybe also add functionality for messages when loading to show who win even without checkmate when having notation like 1-0 (not not very important for now)
 
+# how to play, supported moves e.t.c
+
+
 # how to run tests
 . ex: python -m tests.test_pawn
 
