@@ -16,10 +16,12 @@
 
 
 # todo after basic functionalities
+. add info how to run multiplayer and singleplayer games on local and local + server + other cases
 . remove breakpoints and unnecessary commented parts of code 
 . add good docs for each functions about their input/output and functionalities/roles
 . ability to play using 2 different computers on same network using IP sharing
 . add logging for different levels of info that can be controlled with just pytho logging module to have more idea about debug info if needed
+. make sure debug info is printed when needed(maybe always should be the default?)
 . maybe also add functionality for messages when loading to show who win even without checkmate when having notation like 1-0 (not not very important for now)
 
 # how to play, supported moves e.t.c

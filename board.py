@@ -492,21 +492,34 @@ class Board:
     def _clear_screen():
         os.system("clear")
 
-    def draw(self, debug_mode=False):
+    def draw(self, rotate_180_deg=False, debug_mode=False):
         """
         Draw all pieces where they are belonging to, with given params
+
+        args:
+            1. rotate_180_deg - set to True to draw board like opponent would see it, 180 degrees rotated
+            2. debug_mode - set to True to see defug info live
         """
-        if not debug_mode:
+        if debug_mode:
+            print(f"{self.errors_to_display=}")
+            print(f"{self.moves=}")
+            print(f"{self.chess_notation_moves=}")
+            print()
+        else:
             self._clear_screen()
 
-        print(f"{self.errors_to_display=}")
-        print(f"{self.moves=}")
-        print(f"{self.chess_notation_moves=}")
-        print()
+        # save data here, it makes printing 180 deg rotated easier when needed
+        lines_to_print = []
+
+        if rotate_180_deg:
+            self.errors_to_display = self.errors_to_display[::-1]
 
         for row_index in range(8):
+            curr_line_text_to_print = []
+
             # row number
-            print(f"[grey37]{8 - row_index}[/]", end="")
+            # print(f"[grey37]{8 - row_index}[/]", end="")
+            curr_line_text_to_print.append(f"[grey37]{8 - row_index}[/]")
 
             for col_index in range(8):
                 cell_bg_color = self._get_cell_color_based_on_cell_indices(
@@ -525,20 +538,26 @@ class Board:
                     # empty cell
                     text_to_print = f"[on {cell_bg_color}] [/]"
 
-                print(text_to_print, end="")
+                curr_line_text_to_print.append(text_to_print)
 
             # show which player's turn it is
             if row_index == 0:
+                player_turn_icon = "  "
+
                 if self._player_turn == 2:
-                    print(f"[{self.p2_color}] ⬤[/]", end="")
-                else:
-                    print(f"  ", end="")
+                    player_turn_icon = f"[{self.p2_color}] ⬤[/]"
+
+                # print(player_turn_icon, end="")
+                curr_line_text_to_print.append(player_turn_icon)
 
             if row_index == 7:
+                player_turn_icon = "  "
+
                 if self._player_turn == 1:
-                    print(f"[{self.p1_color}] ⬤[/]", end="")
-                else:
-                    print(f"  ", end="")
+                    player_turn_icon = f"[{self.p1_color}] ⬤[/]"
+
+                # print(player_turn_icon, end="")
+                curr_line_text_to_print.append(player_turn_icon)
 
             # display killed pieces if any
             if row_index in (0, 7):
@@ -551,13 +570,12 @@ class Board:
 
                 if killed_pieces_to_draw:
                     # left padding
-                    print(" " * 2, end="")
+                    curr_line_text_to_print.append(" " * 2)
 
                     # killed pieces
                     for piece in killed_pieces_to_draw:
-                        print(
-                            f"[{piece.color} on {self._black_cell_color}]{piece.piece_icon}[/]",
-                            end=" ",
+                        curr_line_text_to_print.append(
+                            f"[{piece.color} on {self._black_cell_color}]{piece.piece_icon}[/]"
                         )
 
             # display errors if any
@@ -565,20 +583,33 @@ class Board:
             if 2 <= row_index <= 6 and len(self.errors_to_display) > 0:
                 error_text = self.errors_to_display.pop()
 
-                print(
-                    # padding from board
-                    " " * 5,
-                    # actual error message
-                    f"[yellow]{error_text}[/]",
-                    end="",
+                curr_line_text_to_print.extend(
+                    [
+                        # padding from board
+                        " " * 5,
+                        # actual error message
+                        f"[yellow]{error_text}[/]",
+                    ]
                 )
 
             # newline
-            print()
+            curr_line_text_to_print.append("\n")
+
+            lines_to_print.append("".join(curr_line_text_to_print))
 
         # draw column names
-        print(f"[grey37] abcdefgh[/]")
-        # draw row numbers
+        lines_to_print = [
+            "[grey37] abcdefgh[/]\n",
+            *lines_to_print,
+            "[grey37] abcdefgh[/]\n",
+        ]
+
+        # draw everything for given angle
+        if rotate_180_deg:
+            lines_to_print = lines_to_print[::-1]
+
+        for line in lines_to_print:
+            print(line, end="")
 
         # reset errors after every frame update
         self._reset_errors()

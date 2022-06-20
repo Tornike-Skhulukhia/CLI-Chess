@@ -1,7 +1,6 @@
 """
 Run this file from 2-nd computer
 """
-import socket
 from config import HOST, PORT
 from multiplayer_game import Game
 

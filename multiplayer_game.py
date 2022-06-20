@@ -40,20 +40,47 @@ class Game:
             previous_move_cell_color=previous_move_cell_color,
         )
 
-        # self._game_status = "initial"
+        # is used only when doing 2 player game
+        self.player_number = None
 
     def __repr__(self):
         print(f"Game with board\n {self.board}")
+
+    def add_current_player_trouble_messages_if_needed(self):
+
+        # if we have any trouble, show it to us
+        current_player_troubles = self.board.get_current_player_troubles()
+
+        if current_player_troubles["player_is_checked"]:
+            if current_player_troubles["player_is_checkmated"]:
+                # game over, current player lost
+                self.board._add_temporary_error("What a nice checkmate!")
+
+                exit()
+            else:
+                info = current_player_troubles["move_that_makes_check_disappear"]
+
+                self.board._add_temporary_error(
+                    f'(Maybe {info["piece"].position} {info["new_position"]}?)'
+                )
+
+                # add it after previous message as draw function gets info from end first
+                self.board._add_temporary_error("Check!")
 
     def play(self, connection):
         print("Game Started")
 
         # start game and maintain it before necessary
         while True:
-            # draw new board
-            self.board.draw(debug_mode=DEBUG_MODE)
+            self.add_current_player_trouble_messages_if_needed()
+
+            # draw new board  | rotate only for player 2
+            self.board.draw(
+                rotate_180_deg=self.player_number == 2, debug_mode=DEBUG_MODE
+            )
 
             if self.board._player_turn == self.player_number:
+
                 # white moves
                 move_str = input("Type move in format like 'e2 e4'\n")
 
@@ -71,27 +98,6 @@ class Game:
 
                     continue
 
-                    # assert len(move_errors) > 0
-
-                # if next_player_troubles["player_is_checked"]:
-                #     if next_player_troubles["player_is_checkmated"]:
-                #         # game over, current player lost
-                #         # self.board._add_temporary_error("You lost the game!")
-                #         self.board._add_temporary_error("Game Over!")
-
-                #         self.board.draw(debug_mode=DEBUG_MODE)
-
-                #         break
-                #     else:
-                #         info = next_player_troubles["move_that_makes_check_disappear"]
-
-                #         self.board._add_temporary_error(
-                #             f'possible move out of check : {info["piece"]} to {info["new_position"]}'
-                #         )
-
-                #         # add it after previous message as draw function gets info from end first
-                #         self.board._add_temporary_error("Check!")
-
                 connection.send(move_str.encode("utf8"))
             else:
                 # black moves
@@ -103,15 +109,13 @@ class Game:
                     break
                 else:
                     move_str = data.decode("utf8")
+                    # as we sent it after validating, this move
+                    # should always be OK in this state
                     (
                         move_was_successfull,
                         move_errors,
                         next_player_troubles,
                     ) = self.board.make_a_move_if_possible(move_str)
-
-            # time.sleep(0.1)
-
-        # game finished, allow to restart ?
 
     def start_game_hosting(self, host, port):
         print(

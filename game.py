@@ -55,7 +55,7 @@ class Game:
         while self._game_status == "running":
 
             # draw new board
-            self.board.draw(debug_mode=DEBUG_MODE)
+            self.board.draw(debug_mode=DEBUG_MODE, rotate_180_deg=1)
 
             (
                 move_was_successfull,
@@ -84,7 +84,7 @@ class Game:
                     info = next_player_troubles["move_that_makes_check_disappear"]
 
                     self.board._add_temporary_error(
-                        f'possible move out of check : {info["piece"]} to {info["new_position"]}'
+                        f'One possible move: {info["piece"]} {info["new_position"]}'
                     )
 
                     # add it after previous message as draw function gets info from end first

@@ -4,4 +4,4 @@ useful when running/testing both players from the same PC.
 '''
 
 HOST = "localhost"
-PORT = 5003
+PORT = 5004
