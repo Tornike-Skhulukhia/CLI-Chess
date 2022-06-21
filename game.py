@@ -1,4 +1,7 @@
-import re
+'''
+
+'''
+
 import time
 
 from rich import print
@@ -55,7 +58,7 @@ class Game:
         while self._game_status == "running":
 
             # draw new board
-            self.board.draw(debug_mode=DEBUG_MODE, rotate_180_deg=1)
+            self.board.draw(debug_mode=DEBUG_MODE)
 
             (
                 move_was_successfull,

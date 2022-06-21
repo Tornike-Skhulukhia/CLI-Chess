@@ -141,7 +141,7 @@ class TestPawn(BaseTest):
 
         # but can do like knight
         self._assert_was_successful_move("d8 c6")
-    
+
 
 if __name__ == "__main__":
     unittest.main()

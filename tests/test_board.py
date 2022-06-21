@@ -102,8 +102,6 @@ class TestBoard(BaseTest):
             # that it is correct/valid, and raise exception if not,
             # so if no errors raised, it is a good sign
             board.apply_chess_notation_moves(game_moves)
-            
-            # break  # remove break in last steps
 
     def test_correctly_identifies_checkmates(self):
         self.board.apply_chess_notation_moves(

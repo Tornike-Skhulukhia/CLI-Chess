@@ -9,6 +9,7 @@ game = Game(
     # previous_move_cell_color="blue",
 )
 
+
 #########################################################################
 # get specific starting position from chess notation moves of some game
 #########################################################################
@@ -40,7 +41,6 @@ moves = [
     # ["Nxc3", "1-0"],
 ]
 # [:6]
-
 
 
 game.board.apply_chess_notation_moves(moves)
