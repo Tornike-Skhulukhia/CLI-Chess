@@ -55,7 +55,9 @@ def _is_chess_basic_move_str(move):
 
         # for pawn promotion, basic notation may be "E7 E8=Q" or "E7 F8=Q" or "E7 E8=K" ...
         # so if we remove 1 letter from = and QNBR afterwards, it should remain valid cell coordinates
-        parts[1] = re.sub(f"=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]+", "", parts[1])
+        parts[1] = re.sub(
+            f"=[" + PIECE_LETTERS_POSSIBLE_TO_PROMOTE_INTO + "]+", "", parts[1]
+        )
 
         return _is_chess_cell_coord(parts[0]) and _is_chess_cell_coord(parts[1])
     except Exception:
@@ -76,7 +78,7 @@ def _is_chess_notation_move_str(move):
         if move in ("O-O", "O-O-O"):
             return True
 
-        # remove pawn notation as it is not relevant here
+        # remove pawn promotion notation as it is not relevant here
         # it may be at the beginning so notation itself will not be
         # correct itself, but we do not care for now, these functions
         # should get correctly formatted notations
@@ -195,7 +197,7 @@ def _get_linearly_distant_cells_from_piece_position(
     piece, positions_to_pieces, linearity_functions
 ):
     """
-    ex, lets say we got cell E4 and 2 linearity functions and 4 functions
+    Lets say we got cell E4 and 2 linearity functions and 4 functions
     that get next cells based on top, bottom, left and right positions of current
     cells respectively, then this function will try to follow from
     given position cell to given function-orienting cells until it can and
@@ -205,7 +207,7 @@ def _get_linearly_distant_cells_from_piece_position(
     We plan to use this function with diagonal functions for Bishop, with straight functions
     for Rook and with linear and straight functions for Queen.
 
-    Having it written one place is better than having in multiple places, also its usage will be
+    Having it written on one place is better than having in multiple places, also its usage will be
     super easy from callers.
     """
     # possible_moves_to_killed_pieces = []

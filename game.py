@@ -1,26 +1,27 @@
-'''
+"""
+Play chess in CLI with both player being just you.
 
-'''
+Can be useful if you do not have friends to play it with, 
+or you are doing some testing/development.
+"""
 
 import time
-
 from rich import print
 
 from board import Board
 
-
-DEBUG_MODE = 1
+# if set to True, moves history and previous game states
+# will also be printed on the screen during the game
 
 
 class Game:
     """
-    Class to handle game initialization,
-    retreival and validation of arguments and moves.
-    board redrawing after making moves,
-    final screens and retries/scores(if needed).
+    Basic game class that allows 1 player to play both sides of chess game.
 
-    to see all available colors to use for cells and/or pieces visit:
-        https://rich.readthedocs.io/en/stable/appendix/colors.html
+    As you can see from the code, it is very similar to multiplayer_game.py file
+    as they use the same API that board provides.
+
+    Feel free to play with the code and change things as needed here.
     """
 
     def __init__(
@@ -30,12 +31,8 @@ class Game:
         black_cell_color="grey58",
         white_cell_color="grey37",
         previous_move_cell_color="green4",
+        debug_mode=True,
     ):
-        """
-        Get basic configuration infos to start a game.
-
-        . allow multiple different colors to be used for game.
-        """
         self.board = Board(
             p1_color=p1_color,
             p2_color=p2_color,
@@ -43,6 +40,8 @@ class Game:
             white_cell_color=white_cell_color,
             previous_move_cell_color=previous_move_cell_color,
         )
+
+        self.debug_mode = debug_mode
 
         self._game_status = "initial"
 
@@ -58,7 +57,7 @@ class Game:
         while self._game_status == "running":
 
             # draw new board
-            self.board.draw(debug_mode=DEBUG_MODE)
+            self.board.draw(debug_mode=self.debug_mode)
 
             (
                 move_was_successfull,
@@ -82,7 +81,7 @@ class Game:
 
                     self._game_status = "Finished"
 
-                    self.board.draw(debug_mode=DEBUG_MODE)
+                    self.board.draw(debug_mode=self.debug_mode)
                 else:
                     info = next_player_troubles["move_that_makes_check_disappear"]
 
@@ -94,5 +93,3 @@ class Game:
                     self.board._add_temporary_error("Check!")
 
             time.sleep(0.1)
-
-        # game finished, allow to restart ?

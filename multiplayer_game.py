@@ -1,21 +1,25 @@
+"""
+Implements basic functionality with sockets to play game in live using 2 players.
+
+Actually, you do not need to work with this file directly to start the game,
+please look at player_1.py and player_2.py and config.py for that purpose. 
+"""
+
+
 import socket
-import time
 
 from rich import print
 
 from board import Board
 
-DEBUG_MODE = 1
+
 
 
 class Game:
     """
-    Class to handle game initialization,
-    retreival and validation of arguments and moves.
-    board redrawing after making moves,
-    final screens and retries/scores(if needed).
+    Basic class implementing functionality to play chess using 2 player on the same or different networks.
 
-    to see all available colors to use for cells and/or pieces visit:
+    To see all available colors to use for cells and/or pieces visit:
         https://rich.readthedocs.io/en/stable/appendix/colors.html
     """
 
@@ -26,6 +30,7 @@ class Game:
         black_cell_color="grey58",
         white_cell_color="grey37",
         previous_move_cell_color="green4",
+        debug_mode=True,
     ):
         """
         Get basic configuration infos to start a game.
@@ -39,6 +44,8 @@ class Game:
             white_cell_color=white_cell_color,
             previous_move_cell_color=previous_move_cell_color,
         )
+        
+        self.debug_mode = debug_mode
 
         # is used only when doing 2 player game
         self.player_number = None
@@ -72,7 +79,7 @@ class Game:
 
         args = dict(
             rotate_180_deg=self.player_number == 2,
-            debug_mode=DEBUG_MODE,
+            debug_mode=self.debug_mode,
         )
 
         # start game and maintain it before necessary
@@ -85,7 +92,7 @@ class Game:
             if self.board._player_turn == self.player_number:
 
                 # white moves
-                move_str = input("Type move in format like 'e2 e4'\n")
+                move_str = input("Your turn:\n")
 
                 (
                     move_was_successfull,

@@ -29,7 +29,6 @@ def get_real_game_chess_moves_history_from_pgn_file(file_path):
 
     games_info = []
 
-    # breakpoint()
     for game in loaded_games:
         game_moves = []
         total_moves = 0

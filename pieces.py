@@ -104,15 +104,7 @@ class Piece(metaclass=abc.ABCMeta):
 
     @property
     def index_based_position(self):
-        """
-        ex:
-            get "A1" like current piece position and return {"column_index": 0, "row_index": 7}.
 
-            explanation:
-                A is translated to row number 7, and 1 translated into column 0
-
-                Columns start from top to bottom as board is drawn from top to bottom.
-        """
         result = self.position_to_index_based_position(self.position)
 
         return result
@@ -131,14 +123,11 @@ class Piece(metaclass=abc.ABCMeta):
 
     def get_all_possible_cells_where_this_piece_can_kill(self, board_state):
 
-        # try:
         (defended_cells, moves_info,) = self.get_technically_valid_moves_info_for_piece(
             board_state,
             return_defended_cells=True,
             return_only_places_where_piece_can_directly_kill=True,
         )
-        # except:
-        #     breakpoint()
 
         # pawns can only kill where they defend
         if self.piece_name == "pawn":
@@ -205,6 +194,10 @@ class Piece(metaclass=abc.ABCMeta):
         Usually it means moving a piece and killing other piece if necessary, but in case of
         castling, we here will also get additional info about rook that needs to be also moved
         when doing castle operation with king so we also handle that.
+
+        Other special case may be Pawn promotion, where after moving pawn to last
+        row, we remove it from pieces and add new piece that player requested(like Queen)
+        to the same position.
         """
 
         # kill opponent if necessary
@@ -290,7 +283,7 @@ class King(Piece):
         # use second argument to avoid recursion limit.
         # we do not need to know if opponent king have check, when checking where it kills
         # so, for example, it can kill place where our king wants to move
-        # but this case is losing for ourselves, so here case no problem should arise
+        # but this case is losing for ourselves
         assert return_only_places_where_piece_can_directly_kill == return_defended_cells
 
         positions_to_pieces = board_state.positions_to_pieces
@@ -583,11 +576,8 @@ class Pawn(Piece):
         possible_moves_info = []
         defended_cells = []
 
-        try:
-            piece_position = self.position
-            curr_col, curr_row = self.position
-        except:
-            breakpoint()
+        piece_position = self.position
+        curr_col, curr_row = self.position
 
         # if pawn moving forward means only to promote it
         if (self.player_number == 1 and curr_row == "7") or (

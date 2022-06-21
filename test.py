@@ -1,3 +1,7 @@
+'''
+
+'''
+
 from game import Game
 
 
@@ -7,6 +11,7 @@ game = Game(
     # black_cell_color="dark_blue",
     # white_cell_color="orange",
     # previous_move_cell_color="blue",
+    debug_mode=True,
 )
 
 

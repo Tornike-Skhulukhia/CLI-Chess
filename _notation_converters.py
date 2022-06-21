@@ -27,10 +27,7 @@ def convert_basic_move_notation_to_chess_notation(
         _from,
         _to,
     ) = board_state_before_move.get_move_info_if_it_is_valid_move_str(basic_move_str)
-    try:
-        assert bool(move_info)
-    except:
-        breakpoint()
+    assert bool(move_info)
 
     from_cell, to_cell = basic_move_str.upper().split()
 
@@ -120,11 +117,6 @@ def convert_basic_move_notation_to_chess_notation(
 
     res = f"{piece_name_prefix}{clarification_prefix}{kill_prefix}{to_cell.lower()}{pawn_promotion_suffix}{check_suffix}{checkmate_suffix}"
 
-    # print(f"returning {res} for {basic_move_str}")
-
-    # if basic_move_str == "C7 D8=Q":
-    #     breakpoint()
-
     return res
 
 
@@ -184,7 +176,6 @@ def convert_chess_notation_to_basic_move_notation(
     ]
 
     if len(pieces_that_can_move_there) == 0:
-        breakpoint()
         raise ValueError(
             f"Move {chess_notation_bak} does not seem valid/possible on current board"
         )

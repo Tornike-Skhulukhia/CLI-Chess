@@ -1,7 +1,6 @@
 import copy
 import os
 
-
 from rich import print
 
 from _move_related_functions import (
@@ -16,9 +15,7 @@ from pieces import Bishop, King, Knight, Pawn, Piece, Queen, Rook
 
 INVALID_MOVE_ERROR_TEXT = "Invalid move"
 NOT_A_CHESS_MOVE_ERROR_TEXT = "Not a chess move"
-# NO_YOUR_PIECE_ON_CELL_ERROR_FORMAT_TEXT = "Sorry, there is no your piece on cell {}"
-# CANNOT_DO_CASTLE_ERROR_TEXT = "You can not castle that way"
-# SUCCESSFULL_CASTLING_TEXT = "Successfull castle"
+PLAYER_TURN_SYMBOL = "⬤"
 
 
 class Board:
@@ -88,7 +85,7 @@ class Board:
 
         currently checks and other warnings/errors are not rendered at all, but validations are still in place,
         so for example if last position after these moves causes check, player will not be able to play
-        something that does not stop king from checking, so just the errors are not visible(we may change that if needed)
+        something that does not stop king from being checked, so just the errors are not visible(we may change that if needed)
         """
 
         if len(moves_list) > 0:
@@ -174,6 +171,10 @@ class Board:
 
         return positions_to_pieces
 
+    @property
+    def _current_player_has_active_check(self):
+        return self._player_has_check_in_position()
+
     def _get_player_rook_info_if_possible_to_do_castling_with_it(
         self, castling_case="short"
     ):
@@ -225,10 +226,6 @@ class Board:
                 return piece.position, position_if_castled
 
         return None
-
-    @property
-    def _current_player_has_active_check(self):
-        return self._player_has_check_in_position()
 
     def _get_player_king_info_if_possible_to_do_castling_with_it(
         self, castling_case="short"
@@ -309,9 +306,11 @@ class Board:
     def get_current_player_pieces_with_piece_prefix(self, chess_notation):
         """
         "" --> all Pawns
-        K - king
-        N - nights
-        B - bishops
+        K - King
+        Q - Queen
+        N - Nights
+        B - Bishops
+        R - Rook
 
         e.t.c
         """
@@ -330,17 +329,14 @@ class Board:
     def _add_temporary_error(self, error_text):
         self.errors_to_display.append(error_text)
 
-    def _add_temporary_error_at_first_position(self, error_text):
-        self.errors_to_display.insert(0, error_text)
-
     def _reset_errors(self):
         self.errors_to_display = []
 
     def update_moves_history(self, last_move_from, last_move_to, move_info):
         """
-        We store 2 type of history, 1 with just moves like ("g1 f3", "e7 e5")
+        We store 2 type of history, 1 with just moves like [ ["g1 f3", "e7 e5"] , ...]
 
-        and other with official chess notation, like like ("Nf3", "e5")
+        and other with official chess notation, like [ ["Nf3", "e5"], ]
 
         ! Make sure to run this function before changing state of board after specific valid move
         as it needs current playing state to make correct conversion of notations
@@ -385,6 +381,12 @@ class Board:
         """
         Create all pieces as they should be when game starts
         and assign them to current board object.
+
+        Fun fact:
+            . You can make lots of changes here, like play with more than 1 queen
+            per player, or rearrange original location of king and Bishop e.t.c.
+            If you decide to do it, make sure castling functionality is also updated
+            as it currenly uses fixed cells to identify if it is possible to castle.
         """
 
         col_1, col_2 = self.p1_color, self.p2_color
@@ -494,14 +496,18 @@ class Board:
 
     def draw(self, rotate_180_deg=False, debug_mode=False):
         """
-        Draw all pieces where they are belonging to, with given params
+        Draw all pieces where they are belonging to, with given params.
+
+        You can overwrite this method and make drawing in somewhere else if wanted to,
+        like a web browser or the desktop GUI. Main game logic functionality should just work
+        without any major changes necessary.
 
         args:
             1. rotate_180_deg - set to True to draw board like opponent would see it, 180 degrees rotated
-            2. debug_mode - set to True to see defug info live
+            2. debug_mode - set to True to see defug info live, like written version of game in basic and chess notations
+
         """
         if debug_mode:
-            print(f"{self.errors_to_display=}")
             print(f"{self.moves=}")
             print(f"{self.chess_notation_moves=}")
             print()
@@ -514,14 +520,14 @@ class Board:
         if rotate_180_deg:
             self.errors_to_display = self.errors_to_display[::-1]
 
-        for row_index in range(8):
+        for row_index in [range(8), range(8)[::-1]][rotate_180_deg]:
             curr_line_text_to_print = []
 
             # row number
             # print(f"[grey37]{8 - row_index}[/]", end="")
             curr_line_text_to_print.append(f"[grey37]{8 - row_index}[/]")
 
-            for col_index in range(8):
+            for col_index in [range(8), range(8)[::-1]][rotate_180_deg]:
                 cell_bg_color = self._get_cell_color_based_on_cell_indices(
                     row_index, col_index
                 )
@@ -545,7 +551,7 @@ class Board:
                 player_turn_icon = "  "
 
                 if self._player_turn == 2:
-                    player_turn_icon = f"[{self.p2_color}] ⬤[/]"
+                    player_turn_icon = f"[{self.p2_color}] {PLAYER_TURN_SYMBOL}[/]"
 
                 # print(player_turn_icon, end="")
                 curr_line_text_to_print.append(player_turn_icon)
@@ -554,7 +560,7 @@ class Board:
                 player_turn_icon = "  "
 
                 if self._player_turn == 1:
-                    player_turn_icon = f"[{self.p1_color}] ⬤[/]"
+                    player_turn_icon = f"[{self.p1_color}] {PLAYER_TURN_SYMBOL}[/]"
 
                 # print(player_turn_icon, end="")
                 curr_line_text_to_print.append(player_turn_icon)
@@ -579,7 +585,6 @@ class Board:
                         )
 
             # display errors if any
-
             if 2 <= row_index <= 6 and len(self.errors_to_display) > 0:
                 error_text = self.errors_to_display.pop()
 
@@ -598,15 +603,20 @@ class Board:
             lines_to_print.append("".join(curr_line_text_to_print))
 
         # draw column names
-        lines_to_print = [
-            "[grey37] abcdefgh[/]\n",
-            *lines_to_print,
-            "[grey37] abcdefgh[/]\n",
-        ]
+        colnames_row = (
+            "[grey37] abcdefgh[/]\n" if not rotate_180_deg else "[grey37] hgfedcba[/]\n"
+        )
 
-        # draw everything for given angle
-        if rotate_180_deg:
-            lines_to_print = lines_to_print[::-1]
+        lines_to_print = [
+            colnames_row,
+            *lines_to_print,
+            colnames_row,
+        ]
+        # # draw everything for given angle
+        # if rotate_180_deg:
+        #     breakpoint()
+        #     lines_to_print = lines_to_print[::-1]
+        #     lines_to_print = [i[::-1] for i in lines_to_print]
 
         for line in lines_to_print:
             print(line, end="")
@@ -616,8 +626,7 @@ class Board:
 
     def kill_piece(self, killed_opponent_piece):
         """
-        Remove piece from player pieces list and
-        add into other players killed pieces list
+        Remove piece from player pieces list and add into other players killed pieces list
         """
 
         if killed_opponent_piece.player_number == 1:
@@ -631,7 +640,9 @@ class Board:
 
     def get_move_info_if_it_is_valid_move_str(self, move_str):
         """
-        Returns False if move does not seem valid, dictionary with move info otherwise
+        Returns False if move does not seem valid, dictionary with move info otherwise.
+        If move info dictionary returned, it will have same structure as Pieces return
+        it using their get_technically_valid_moves_info_for_piece method.
         """
         move_info = False
         piece = None
@@ -714,7 +725,7 @@ class Board:
 
                                 If move is not successfull, this dictionary is empty, as it makes
                                 no sense to check for checks/checkmates again if move was not valid,
-                                so not applied to board.
+                                meaning it was not applied to board.
 
         """
         move_info, piece, _from, _to = self.get_move_info_if_it_is_valid_move_str(
@@ -726,16 +737,12 @@ class Board:
 
         # run it before making actual changes as current notations translations implementation
         # needs board state info before making actual move on board itself
-
         # as conversions that happen, make decisions based on current board state, not after move
         self.update_moves_history(
             last_move_from=_from, last_move_to=_to, move_info=move_info
         )
 
-        piece.apply_move_info_to_board(
-            board_state=self,
-            move_info=move_info,
-        )
+        piece.apply_move_info_to_board(board_state=self, move_info=move_info)
 
         # after each move, check if opponent has checkmate or check
         # and return this info here for easier access
@@ -745,6 +752,23 @@ class Board:
         return True, [], next_player_troubles
 
     def get_current_player_troubles(self):
+        """
+        Get info if currently active player has check or checkmates.
+        If there is a check, but not a checkmate, besides 2 main keys(player_is_checked and player_is_checkmated)
+        there will also be third useful key move_that_makes_check_disappear, which will have some move
+        that can be done to stop the check.
+
+        Result structure for checkmated case:
+            {
+                "player_is_checked": True,
+                "player_is_checkmated": True,
+                "move_that_makes_check_disappear": {},
+            }
+
+        Currently this function does not return info if it is draw/stalemate, but if needed,
+        should be not very difficult to implement basic version of it using already existing functionality.
+
+        """
         return_me = {
             "player_is_checked": False,
             "player_is_checkmated": False,
