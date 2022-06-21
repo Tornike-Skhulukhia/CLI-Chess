@@ -91,7 +91,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# Nice ideas that may be implemented later  
+# Some ideas that may be implemented later  
 . Showing some kind of historical info like famous players that had similar situations during the game  
 . do not stop game after 1 checkmate and add scoring  
 
