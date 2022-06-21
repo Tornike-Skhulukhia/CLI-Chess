@@ -1,11 +1,50 @@
-# CLI CHESS/Command line based Chess
+# CLI CHESS / Command line based Chess with Python
 
 ![Image](./static/draft_image.png)
 
+# What is it?
+This is the cutest Chess I have ever played in the command line.
 
-# this readme is draft, still in development
+# Why does it exist?
+To play directly or use as a standalone basic chess engine
 
-# When playing, make sure to increase font size and change settings to make board more square-like. On Linux mint terminal for example, this can be done using  Edit -> Preferences -> Cell -> Text Spacing . (1.8-2 seems good enough)
+# How to install?
+If you plan to just Play it, the only requirement will be rich
+```bash
+python3 -m pip install rich
+```
+If you would like to continue development and run tests, also some type of pgn parser would be beneficial for chess notation loading functionality, ex:
+```bash
+python3 -m pip install git+https://github.com/renatopp/pgnparser
+```
+
+# How to play?
+
+
+## using 1 player
+## using 2 players
+
+### special types of moves
+. Castling  
+. En passant  
+. Pawn promotion  
+
+### what you can do with it?
+
+## Currently Known bugs
+None
+
+## Things that are not implemented
+. Stalemate and draw - I think for now they were not necessary, but can be added in the future
+
+## running tests
+
+## contribution
+
+## license
+
+
+# When playing, make sure to increase font size and change settings to make board more square-like if needed.
 
 
 . Maybe add some kind of historical info live visibility like famous players that had similar situations and some link or small info, if game is started in this specific info-ish mode, which can make game a bit more funny  
