@@ -36,7 +36,7 @@ Currently Board object allows to read chess notations directly, like Nf3 or Bxc3
 
 
 ## Handling special types of moves
-. Castling - You can just type queen positions before and after castling, or use short-long castle notations like O-O and O-O-O (Big letter O-s, not 0(zeros))  
+. Castling - You can just type king positions before and after castling, or use short-long castle notations like O-O and O-O-O (Big letter O-s, not 0(zeros))  
 . En passant - also same as castling, just type before and after locations, killing will be done if possible  
 . Pawn promotion - example input: "e7 e8=Q", meaning go to last row and promote pawn to Queen. Instead of Q-ueen, you can also use R-ook, B-ishop or k-N-ight.  
 
@@ -97,5 +97,5 @@ SOFTWARE.
 
 
 # Warnings
-. some colors may not work on some terminals, if it is the case for you, please try different one, or change the default colors used with one these: https://rich.readthedocs.io/en/stable/appendix/colors.html
+. some colors may not work on some terminals, if it is the case for you, please try different one, or change the default colors used with one of these: https://rich.readthedocs.io/en/stable/appendix/colors.html
 
