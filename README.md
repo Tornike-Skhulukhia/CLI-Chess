@@ -9,11 +9,11 @@ This is the cutest Chess I have ever played in the command line.
 To play directly or use as a standalone basic chess engine
 
 # What it allows to do
-. playing chess using 1 or 2 player
-. customize styling of cells and pieces separately for each player
-. identify checks and checkmates
-. Handling special cases like En passant and Castling
-. Loading written chess games using their chess notations
+. playing chess using 1 or 2 player  
+. customize styling of cells and pieces separately for each player  
+. identify checks and checkmates  
+. Handling special cases like En passant and Castling  
+. Loading written chess games using their chess notations  
 
 # How to install?
 If you plan to just Play it, the only requirement will be rich for nice UI
