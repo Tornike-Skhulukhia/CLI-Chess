@@ -96,7 +96,6 @@ SOFTWARE.
 . do not stop game after 1 checkmate and add scoring
 
 
-###########################
 # Warnings
-some colors may not work on some terminals, if it is the case for you, please try different one, or change the default colors used with one these: https://rich.readthedocs.io/en/stable/appendix/colors.html
+. some colors may not work on some terminals, if it is the case for you, please try different one, or change the default colors used with one these: https://rich.readthedocs.io/en/stable/appendix/colors.html
 
