@@ -36,9 +36,9 @@ Currently Board object allows to read chess notations directly, like Nf3 or Bxc3
 
 
 ## Handling special types of moves
-. Castling - You can just type queen positions before and after castling, or use short-long castle notations like O-O and O-O-O (Big letter O-s, not 0(zeros))
-. En passant - also same as castling, just type before and after locations, killing will be done if possible
-. Pawn promotion - example input: "e7 e8=Q", meaning go to last row and promote pawn to Queen. Instead of Q-ueen, you can also use R-ook, B-ishop or k-N-ight.
+. Castling - You can just type queen positions before and after castling, or use short-long castle notations like O-O and O-O-O (Big letter O-s, not 0(zeros))  
+. En passant - also same as castling, just type before and after locations, killing will be done if possible  
+. Pawn promotion - example input: "e7 e8=Q", meaning go to last row and promote pawn to Queen. Instead of Q-ueen, you can also use R-ook, B-ishop or k-N-ight.  
 
 # How to play?
 ### using 1 player
@@ -91,9 +91,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-# Nice ideas that may be implemented later
-. Showing some kind of historical info like famous players that had similar situations during the game
-. do not stop game after 1 checkmate and add scoring
+# Nice ideas that may be implemented later  
+. Showing some kind of historical info like famous players that had similar situations during the game  
+. do not stop game after 1 checkmate and add scoring  
 
 
 # Warnings
