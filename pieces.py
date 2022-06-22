@@ -768,7 +768,7 @@ class Pawn(Piece):
                 else:
                     defended_cells.append(top_right)
 
-            ### An passant
+            ### En passant
             if board_state.total_moves_count > 0:
                 opponents_last_moves = []
 
@@ -795,7 +795,7 @@ class Pawn(Piece):
                 # whites can do it only from 5-th row
                 if piece_position[-1] == "5":
 
-                    # left an passant check
+                    # left En passant check
                     left_cell = _left_coords(piece_position)
                     if last_move_to == left_cell:
 
@@ -815,7 +815,7 @@ class Pawn(Piece):
                                     }
                                 )
 
-                    # right an passant check
+                    # right En passant check
                     right_cell = _right_coords(piece_position)
                     if last_move_to == right_cell:
 
@@ -840,7 +840,7 @@ class Pawn(Piece):
                 # blacks can do it only from 4-th row
                 if piece_position[-1] == "4":
 
-                    # left from whites perspective an passant check
+                    # left from whites perspective En passant check
                     left_cell = _left_coords(piece_position)
                     if last_move_to == left_cell:
                         if last_move_to in board_state.positions_to_pieces:
@@ -860,7 +860,7 @@ class Pawn(Piece):
                                     }
                                 )
 
-                    # right from whites perspective an passant check
+                    # right from whites perspective En passant check
                     right_cell = _right_coords(piece_position)
                     if last_move_to == right_cell:
 
