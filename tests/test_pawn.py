@@ -65,7 +65,7 @@ class TestPawn(BaseTest):
         )
         self._assert_was_not_successful_move("d2 d3")
 
-    def test_can_do_an_passant_left(self):
+    def test_can_do_en_passant_left(self):
         self.board.apply_chess_notation_moves(
             [
                 ["e4", "a6"],
@@ -75,7 +75,7 @@ class TestPawn(BaseTest):
 
         self._assert_was_successful_move("E5 D6")
 
-    def test_can_not_do_an_passant_left_too_late(self):
+    def test_can_not_do_en_passant_left_too_late(self):
         self.board.apply_chess_notation_moves(
             [
                 ["e4", "a6"],
@@ -86,7 +86,7 @@ class TestPawn(BaseTest):
 
         self._assert_was_not_successful_move("E5 D6")
 
-    def test_can_do_an_passant_right(self):
+    def test_can_do_en_passant_right(self):
         self.board.apply_chess_notation_moves(
             [
                 ["e4", "a6"],
@@ -96,7 +96,7 @@ class TestPawn(BaseTest):
 
         self._assert_was_successful_move("E5 F6")
 
-    def test_can_not_do_an_passant_right_too_late(self):
+    def test_can_not_do_en_passant_right_too_late(self):
         self.board.apply_chess_notation_moves(
             [
                 ["e4", "a6"],
